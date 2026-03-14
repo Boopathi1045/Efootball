@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List } from "lucide-react";
+import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 export default function TournamentDetails() {
@@ -90,9 +90,10 @@ export default function TournamentDetails() {
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Info },
-    { id: "players", label: "Players", icon: Users },
-    { id: "standings", label: "Standings", icon: LayoutGrid },
+    { id: "bracket", label: "Bracket", icon: Trophy },
     { id: "fixtures", label: "Fixtures", icon: Calendar },
+    { id: "standings", label: "Standings", icon: LayoutGrid },
+    { id: "players", label: "Players", icon: Users },
   ];
 
   return (
@@ -158,6 +159,12 @@ export default function TournamentDetails() {
             </section>
           )}
 
+          {activeTab === "bracket" && (
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-x-auto pb-12 scrollbar-hide">
+              <BracketView matches={matches} />
+            </section>
+          )}
+
           {activeTab === "players" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden">
@@ -203,7 +210,7 @@ export default function TournamentDetails() {
                   style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}
                 >
                   {groups.map((grp: string) => (
-                    <GroupTable key={grp} name={`GROUP ${grp}`} players={groupedPlayers[grp]} />
+                    <GroupTable key={grp} name={`GROUP ${grp}`} players={groupedPlayers[grp]} matches={matches} />
                   ))}
                   {groups.length === 0 && (
                     <div className="col-span-full glass-panel p-12 rounded-xl text-center text-background-light/70 flex flex-col items-center gap-4 border border-primary/20">
@@ -251,9 +258,13 @@ export default function TournamentDetails() {
                             <div className="flex-1 flex items-center justify-center gap-4 w-full">
                               <div className="flex-1 text-right font-bold text-white truncate">{match.homePlayerName}</div>
                               <div className="px-4 py-2 bg-background-dark rounded-lg border border-primary/10 font-mono font-bold flex items-center gap-2 min-w-[80px] justify-center">
-                                <span className={match.homeScore > match.awayScore ? "text-secondary text-lg" : "text-background-light text-md"}>{match.homeScore ?? '-'}</span>
+                                <span className={match.status === 'completed' && match.homeScore > match.awayScore ? "text-secondary text-lg" : "text-background-light text-md"}>
+                                  {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
+                                </span>
                                 <span className="text-background-light/30 text-xs mt-1">VS</span>
-                                <span className={match.awayScore > match.homeScore ? "text-secondary text-lg" : "text-background-light text-md"}>{match.awayScore ?? '-'}</span>
+                                <span className={match.status === 'completed' && match.awayScore > match.homeScore ? "text-secondary text-lg" : "text-background-light text-md"}>
+                                  {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
+                                </span>
                               </div>
                               <div className="flex-1 text-left font-bold text-white truncate">{match.awayPlayerName}</div>
                             </div>
@@ -272,48 +283,203 @@ export default function TournamentDetails() {
   );
 }
 
-function GroupTable({ name, players }: { key?: string | number, name: string, players: any[] }) {
+function GroupTable({ name, players, matches }: { key?: string | number, name: string, players: any[], matches?: any[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayPlayers = isExpanded ? players : players.slice(0, 5);
+
+  const getPlayerForm = (playerId: string) => {
+    if (!matches) return [];
+    const playerMatches = matches.filter(m => m.status === 'completed' && (m.homePlayerId === playerId || m.awayPlayerId === playerId));
+    playerMatches.sort((a, b) => (b.matchIndex || 0) - (a.matchIndex || 0));
+    
+    return playerMatches.slice(0, 5).reverse().map(m => {
+      if (m.homeScore === m.awayScore) return 'D';
+      if (m.homePlayerId === playerId) {
+        return m.homeScore > m.awayScore ? 'W' : 'L';
+      } else {
+        return m.awayScore > m.homeScore ? 'W' : 'L';
+      }
+    });
+  };
+
   return (
-    <div className="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden">
-      <div className="bg-primary/10 px-6 py-4 border-b border-primary/10">
-        <h4 className="font-bold text-primary">{name}</h4>
+    <div className="bg-background-dark/40 border border-white/5 rounded-[2rem] overflow-hidden backdrop-blur-sm shadow-2xl">
+      <div className="bg-white/[0.02] px-8 py-6 border-b border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(15,164,175,0.5)]" />
+          <h4 className="font-black italic uppercase tracking-widest text-white text-lg">{name}</h4>
+        </div>
+        <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">{players.length} Players</span>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-primary/5 text-background-light/70 uppercase text-xs font-bold">
-            <tr>
-              <th className="px-4 py-3">Rank</th>
-              <th className="px-4 py-3">Player</th>
-              <th className="px-4 py-3">eFootball ID</th>
-              <th className="px-4 py-3 text-center">P</th>
-              <th className="px-4 py-3 text-center">W</th>
-              <th className="px-4 py-3 text-center">D</th>
-              <th className="px-4 py-3 text-center">L</th>
-              <th className="px-4 py-3 text-center">GD</th>
-              <th className="px-4 py-3 text-center">Pts</th>
+        <table className="w-full text-left text-sm border-collapse">
+          <thead className="bg-white/5">
+            <tr className="text-white/40 uppercase text-[10px] font-black tracking-[0.15em]">
+              <th className="px-6 py-4 w-16 text-center">#</th>
+              <th className="px-6 py-4">Player</th>
+              <th className="px-4 py-4 text-center">MP</th>
+              <th className="px-4 py-4 text-center">W</th>
+              <th className="px-4 py-4 text-center">D</th>
+              <th className="px-4 py-4 text-center">L</th>
+              <th className="px-4 py-4 text-center">GD</th>
+              <th className="px-6 py-4 text-center font-black text-primary">Pts</th>
+              <th className="px-6 py-4 text-center">Form</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-primary/5">
-            {players.map((p, i) => (
-              <tr key={p.id} className="hover:bg-primary/5">
-                <td className="px-4 py-4 font-bold text-primary">{i + 1}</td>
-                <td className="px-4 py-4 font-bold">{p.name}</td>
-                <td className="px-4 py-4 text-slate-400 font-mono text-xs">{p.efootballId}</td>
-                <td className="px-4 py-4 text-center">{p.played || 0}</td>
-                <td className="px-4 py-4 text-center">{p.wins || 0}</td>
-                <td className="px-4 py-4 text-center">{p.draws || 0}</td>
-                <td className="px-4 py-4 text-center">{p.losses || 0}</td>
-                <td className="px-4 py-4 text-center">{p.gd || 0}</td>
-                <td className="px-4 py-4 text-center font-bold text-secondary">{p.points || 0}</td>
+          <tbody className="divide-y divide-white/[0.03]">
+            {displayPlayers.map((p, i) => (
+              <tr key={p.id} className="group hover:bg-white/[0.02] transition-all duration-300">
+                <td className="px-6 py-6 text-center">
+                  <span className="text-xs font-black text-white/30 group-hover:text-primary transition-colors">{i + 1}</span>
+                </td>
+                <td className="px-6 py-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[11px] font-black text-white/60 uppercase shadow-inner group-hover:border-primary/40 group-hover:scale-110 transition-all duration-300">
+                      {p.name.substring(0,2)}
+                    </div>
+                    <span className="font-black text-white italic tracking-tighter text-base group-hover:text-primary transition-colors">{p.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-6 text-center font-bold text-white/40 group-hover:text-white/60">{p.played || 0}</td>
+                <td className="px-4 py-6 text-center text-white/60">{p.wins || 0}</td>
+                <td className="px-4 py-6 text-center text-white/40">{p.draws || 0}</td>
+                <td className="px-4 py-6 text-center text-white/40">{p.losses || 0}</td>
+                <td className="px-4 py-6 text-center text-white/60 font-mono text-xs">{p.gd > 0 ? `+${p.gd}` : p.gd}</td>
+                <td className="px-6 py-6 text-center font-black text-primary text-xl tracking-tighter italic">{p.points || 0}</td>
+                <td className="px-6 py-6 border-l border-white/[0.02]">
+                  <div className="flex items-center justify-center gap-1.5 min-w-[120px]">
+                    {getPlayerForm(p.id).map((result, idx) => (
+                      <div key={idx} className="relative group/form">
+                         {result === 'W' && <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-500/10 transition-transform group-hover/form:scale-125" />}
+                         {result === 'L' && <XCircle className="w-5 h-5 text-red-500 fill-red-500/10 transition-transform group-hover/form:scale-125" />}
+                         {result === 'D' && <MinusCircle className="w-5 h-5 text-slate-500 fill-slate-500/10 transition-transform group-hover/form:scale-125" />}
+                      </div>
+                    ))}
+                    {getPlayerForm(p.id).length === 0 && <span className="text-white/10 text-[10px] font-black uppercase tracking-[0.2em]">-</span>}
+                  </div>
+                </td>
               </tr>
             ))}
             {players.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-slate-500">No players assigned yet.</td>
+                <td colSpan={9} className="px-6 py-10 text-center text-white/20 font-black uppercase tracking-widest italic">No players assigned yet.</td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+      {players.length > 5 && (
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full py-4 bg-white/[0.02] hover:bg-white/5 border-t border-white/5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/30 hover:text-primary transition-all group"
+        >
+          {isExpanded ? 'Show Less' : 'Show More'}
+          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function BracketView({ matches }: { matches: any[] }) {
+  const qfMatches = matches.filter(m => m.round === "Quarter Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  
+  // Always ensure at least 2 slots for Semi Finals if none exist, to show the structure
+  const rawSfMatches = matches.filter(m => m.round === "Semi Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  const sfMatches = rawSfMatches.length > 0 ? rawSfMatches : [
+    { id: 'p-sf-1', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
+    { id: 'p-sf-2', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' }
+  ];
+
+  const finalMatch = matches.find(m => m.round === "Grand Final");
+
+  const MatchNode = ({ match, title }: { match: any, title: string }) => (
+    <div className="flex flex-col gap-2 min-w-[220px]">
+      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 italic px-2">{title}</span>
+      <div className="bg-white/[0.03] border-l-4 border-primary rounded-r-2xl border border-y-white/5 border-r-white/5 overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] transition-colors gap-4">
+          <span className={`text-sm font-bold truncate ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
+            {match.homePlayerName}
+          </span>
+          <span className={`w-8 h-8 rounded flex items-center justify-center text-xs font-black shrink-0 ${match.status === 'completed' && match.homeScore > match.awayScore ? 'bg-primary text-background-dark' : 'bg-white/5 text-white/20'}`}>
+            {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-4">
+          <span className={`text-sm font-bold truncate ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
+            {match.awayPlayerName}
+          </span>
+          <span className={`w-8 h-8 rounded flex items-center justify-center text-xs font-black shrink-0 ${match.status === 'completed' && match.awayScore > match.homeScore ? 'bg-primary text-background-dark' : 'bg-white/5 text-white/20'}`}>
+            {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex gap-16 py-8 items-center min-w-[max-content]">
+      {/* Quarter Finals */}
+      {qfMatches.length > 0 && (
+        <div className="flex flex-col gap-12">
+          {qfMatches.map((m, i) => (
+            <div key={m.id} className="relative">
+              <MatchNode match={m} title={`Quarter-Final ${i + 1}`} />
+              <div className="absolute top-1/2 -right-16 w-16 h-px bg-white/10" />
+              {i % 2 === 0 ? (
+                <div className="absolute top-1/2 -right-16 h-[88px] w-px bg-white/10" />
+              ) : (
+                <div className="absolute bottom-1/2 -right-16 h-[88px] w-px bg-white/10" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Semi Finals */}
+      <div className="flex flex-col gap-40">
+        {sfMatches.map((m, i) => (
+          <div key={m.id} className="relative">
+            <MatchNode match={m} title={`Semi-Final ${i + 1}`} />
+            <div className="absolute top-1/2 -right-16 w-16 h-px bg-white/10" />
+            {i % 2 === 0 ? (
+              <div className="absolute top-1/2 -right-16 h-[140px] w-px bg-white/10" />
+            ) : (
+              <div className="absolute bottom-1/2 -right-16 h-[140px] w-px bg-white/10" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Grand Final Card */}
+      <div className="ml-8">
+        <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_50px_rgba(15,164,175,0.2)]">
+          <div className="bg-background-dark rounded-[2.4rem] p-10 flex flex-col items-center gap-6 min-w-[320px] text-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 neon-glow">
+              <Trophy className="w-10 h-10 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
+              <p className="text-[10px] text-white/30 uppercase font-bold tracking-[0.3em]">The Ultimate Showdown</p>
+            </div>
+            
+            <div className="flex flex-col gap-4 w-full py-6">
+              <div className="text-3xl font-black italic uppercase tracking-tighter text-white/90 truncate max-w-full">
+                {finalMatch ? finalMatch.homePlayerName : "TBD"} 
+                <span className="text-primary mx-4 text-xl">VS</span>
+                {finalMatch ? finalMatch.awayPlayerName : "TBD"}
+              </div>
+              <div className="text-xs font-bold text-white/20 uppercase tracking-[0.2em]">
+                {finalMatch?.status === 'completed' ? `Result: ${finalMatch.homeScore} - ${finalMatch.awayScore}` : "Match Pending"}
+              </div>
+            </div>
+
+            <button className="group relative px-12 py-4 bg-primary text-background-dark font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-xl overflow-hidden min-w-[200px]">
+              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 rotate-12" />
+              Watch Live
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

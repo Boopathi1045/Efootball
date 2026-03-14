@@ -37,6 +37,9 @@ export default function AdminDashboard() {
   const [showManualPlayerForm, setShowManualPlayerForm] = useState(false);
   const [manualPlayerData, setManualPlayerData] = useState({ name: "", efootballId: "", phone: "" });
 
+  const [showNewMatchForm, setShowNewMatchForm] = useState(false);
+  const [newMatchData, setNewMatchData] = useState({ homePlayerId: "", awayPlayerId: "", stage: "Knockout" });
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -173,16 +176,175 @@ export default function AdminDashboard() {
 
   const updateMatchScore = async (id: string, homeScore: number, awayScore: number) => {
     // Optimistic update
-    setMatches(prev => prev.map(m => m.id === id ? { ...m, "homeScore": homeScore, "awayScore": awayScore, status: "completed" } : m));
+    setMatches(prev => prev.map(m => m.id === id ? { ...m, "homeScore": homeScore, "awayScore": awayScore } : m));
 
     const { error } = await supabase.from('matches').update({ 
       "homeScore": homeScore, 
-      "awayScore": awayScore, 
-      status: "completed" 
+      "awayScore": awayScore
     }).eq('id', id);
     if (error) {
       console.error("Update match score error:", error);
       alert("Failed to update match score: " + error.message);
+    }
+  };
+
+  const recalculateStandings = async (tournamentId: string) => {
+    // Fetch all players and matches for this tournament
+    const { data: allPlayers } = await supabase.from('players').select('*').eq('tournamentId', tournamentId);
+    const { data: allMatches } = await supabase.from('matches').select('*').eq('tournamentId', tournamentId).eq('status', 'completed');
+    
+    if (!allPlayers || !allMatches) return;
+
+    const playerStats = allPlayers.map(player => {
+      const pMatches = allMatches.filter(m => m.homePlayerId === player.id || m.awayPlayerId === player.id);
+      
+      let wins = 0, draws = 0, losses = 0, played = 0, gd = 0, points = 0;
+
+      pMatches.forEach(m => {
+        played++;
+        const isHome = m.homePlayerId === player.id;
+        const hScore = m.homeScore || 0;
+        const aScore = m.awayScore || 0;
+
+        if (isHome) {
+          gd += (hScore - aScore);
+          if (hScore > aScore) wins++;
+          else if (hScore < aScore) losses++;
+          else draws++;
+        } else {
+          gd += (aScore - hScore);
+          if (aScore > hScore) wins++;
+          else if (aScore < hScore) losses++;
+          else draws++;
+        }
+      });
+
+      points = (wins * 3) + draws;
+
+      return {
+        id: player.id,
+        played, wins, draws, losses, gd, points
+      };
+    });
+
+    // Batch update players
+    for (const stats of playerStats) {
+      await supabase.from('players').update({
+        played: stats.played,
+        wins: stats.wins,
+        draws: stats.draws,
+        losses: stats.losses,
+        gd: stats.gd,
+        points: stats.points
+      }).eq('id', stats.id);
+    }
+  };
+
+  const autoAdvanceStage = async (tournamentId: string) => {
+    // 1. Fetch current matches
+    const { data: allMatches } = await supabase.from('matches').select('*').eq('tournamentId', tournamentId);
+    if (!allMatches || allMatches.length === 0) return;
+
+    // 2. Identify the "latest" stage
+    const stages = Array.from(new Set(allMatches.map(m => m.round))).filter(Boolean) as string[];
+    // Priority order: Group Stage -> Round 1 -> Quarter Final -> Semi Final -> Final
+    const stagePriority = (s: string) => {
+      if (s.startsWith('Group')) return 1;
+      if (s === 'Round 1') return 2;
+      if (s === 'Quarter Final') return 3;
+      if (s === 'Semi Final') return 4;
+      if (s === 'Grand Final') return 5;
+      return 0;
+    };
+
+    const latestStage = stages.sort((a, b) => stagePriority(b) - stagePriority(a))[0];
+    const stageMatches = allMatches.filter(m => m.round === latestStage);
+    const allCompleted = stageMatches.every(m => m.status === 'completed');
+
+    if (!allCompleted) return;
+
+    // 3. Determine next stage
+    let nextStage = "";
+    let qualifiedPlayerIds: string[] = [];
+
+    if (latestStage.startsWith('Group')) {
+      // Transition from Groups to Knockout
+      // Find all groups
+      const groupNames = Array.from(new Set(allMatches.filter(m => m.round?.startsWith('Group')).map(m => m.round!.replace('Group ', ''))));
+      
+      // Fetch players to get standings
+      const { data: players } = await supabase.from('players').select('*').eq('tournamentId', tournamentId);
+      if (!players) return;
+
+      const topPlayers: any[] = [];
+      groupNames.forEach(gn => {
+        const gp = players.filter(p => p.group === gn).sort((a,b) => b.points - a.points || b.gd - a.gd);
+        // Take Top 2
+        topPlayers.push(...gp.slice(0, 2));
+      });
+
+      qualifiedPlayerIds = topPlayers.map(p => p.id);
+      
+      if (qualifiedPlayerIds.length === 8) nextStage = "Quarter Final";
+      else if (qualifiedPlayerIds.length === 4) nextStage = "Semi Final";
+      else if (qualifiedPlayerIds.length === 2) nextStage = "Grand Final";
+      else return; // Unsupported auto-advance count
+    } else if (latestStage === "Quarter Final") {
+      qualifiedPlayerIds = stageMatches.map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
+      nextStage = "Semi Final";
+    } else if (latestStage === "Semi Final") {
+      qualifiedPlayerIds = stageMatches.map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
+      nextStage = "Grand Final";
+    }
+
+    if (!nextStage || qualifiedPlayerIds.length < 2) return;
+
+    // 4. Check if next stage already exists
+    const nextStageExists = allMatches.some(m => m.round === nextStage);
+    if (nextStageExists) return;
+
+    // 5. Generate and randomize next stage matches
+    const { data: playersInfo } = await supabase.from('players').select('id, name').in('id', qualifiedPlayerIds);
+    if (!playersInfo) return;
+
+    const randomized = [...playersInfo].sort(() => Math.random() - 0.5);
+    const newMatches = [];
+    let matchIdx = allMatches.length + 1;
+
+    for (let i = 0; i < randomized.length; i += 2) {
+      if (randomized[i+1]) {
+        newMatches.push({
+          tournamentId,
+          homePlayerId: randomized[i].id,
+          homePlayerName: randomized[i].name,
+          awayPlayerId: randomized[i+1].id,
+          awayPlayerName: randomized[i+1].name,
+          status: 'pending',
+          round: nextStage,
+          matchIndex: matchIdx++
+        });
+      }
+    }
+
+    if (newMatches.length > 0) {
+      await supabase.from('matches').insert(newMatches);
+      alert(`Automated Advance: All ${latestStage} matches completed. ${nextStage} fixtures have been randomized and generated!`);
+    }
+  };
+
+  const toggleMatchStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    // Optimistic update
+    setMatches(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m));
+
+    const { error } = await supabase.from('matches').update({ status: newStatus }).eq('id', id);
+    if (error) {
+      console.error("Toggle match status error:", error);
+      alert("Failed to toggle match status: " + error.message);
+    } else if (newStatus === 'completed' && selectedTournament) {
+      // Trigger automation
+      await recalculateStandings(selectedTournament.id);
+      await autoAdvanceStage(selectedTournament.id);
     }
   };
 
@@ -207,6 +369,61 @@ export default function AdminDashboard() {
         console.error("Delete player error:", error);
         alert("Failed to delete player: " + error.message);
       }
+    }
+  };
+
+  const deleteMatch = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this match?")) {
+      setMatches(prev => prev.filter(m => m.id !== id));
+      const { error } = await supabase.from('matches').delete().eq('id', id);
+      if (error) {
+        console.error("Delete match error:", error);
+        alert("Failed to delete match: " + error.message);
+      }
+    }
+  };
+
+  const updateMatchDetails = async (id: string, updates: any) => {
+    setMatches(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+    const { error } = await supabase.from('matches').update(updates).eq('id', id);
+    if (error) {
+      console.error("Update match details error:", error);
+      alert("Failed to update match details: " + error.message);
+    }
+  };
+
+  const createCustomMatch = async (e: any) => {
+    e.preventDefault();
+    if (!selectedTournament) return;
+    
+    if (newMatchData.homePlayerId === newMatchData.awayPlayerId) {
+      alert("A player cannot play against themselves.");
+      return;
+    }
+
+    const homePlayerName = players.find(p => p.id === newMatchData.homePlayerId)?.name || "TBD";
+    const awayPlayerName = players.find(p => p.id === newMatchData.awayPlayerId)?.name || "TBD";
+
+    const matchDoc = {
+      tournamentId: selectedTournament.id,
+      homePlayerId: newMatchData.homePlayerId,
+      homePlayerName: homePlayerName,
+      awayPlayerId: newMatchData.awayPlayerId,
+      awayPlayerName: awayPlayerName,
+      homeScore: 0,
+      awayScore: 0,
+      status: "pending",
+      stage: newMatchData.stage,
+      matchIndex: matches.length + 1
+    };
+
+    const { error } = await supabase.from('matches').insert([matchDoc]);
+    if (error) {
+      console.error("Create match error:", error);
+      alert("Failed to create match: " + error.message);
+    } else {
+      setShowNewMatchForm(false);
+      setNewMatchData({ homePlayerId: "", awayPlayerId: "", stage: "Knockout" });
     }
   };
 
@@ -1222,40 +1439,136 @@ export default function AdminDashboard() {
                     <p className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{matches.length} matches total</p>
                   </div>
                 </div>
-                {matches.length === 0 && approvedPlayers.length > 0 && (
-                  <button 
-                    onClick={generateFixtures}
-                    className="px-5 py-2.5 bg-secondary text-white text-[11px] font-extrabold rounded-xl uppercase tracking-wider hover:brightness-110 flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-secondary/10"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" /> Generate Fixtures
-                  </button>
-                )}
+                <div className="flex items-center gap-3">
+                  {matches.length === 0 && approvedPlayers.length > 0 && (
+                    <button 
+                      onClick={generateFixtures}
+                      className="px-5 py-2.5 bg-secondary text-white text-[11px] font-extrabold rounded-xl uppercase tracking-wider hover:brightness-110 flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-secondary/10"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> Generate Fixtures
+                    </button>
+                  )}
+                  {overrideMode && (
+                    <button 
+                      onClick={() => setShowNewMatchForm(!showNewMatchForm)}
+                      className="px-5 py-2.5 bg-primary/20 text-primary border border-primary/20 text-[11px] font-extrabold rounded-xl uppercase tracking-wider hover:bg-primary/30 flex items-center gap-2 transition-all active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Next Stage Match
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {showNewMatchForm && (
+                <form onSubmit={createCustomMatch} className="p-6 bg-primary/[0.03] border-b border-white/5 grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">Stage / Round</label>
+                    <input required value={newMatchData.stage} onChange={e => setNewMatchData({...newMatchData, stage: e.target.value})} className="bg-background-dark/80 border border-white/5 rounded-2xl px-4 py-3 text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="e.g. Quarter Final" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">Home Player</label>
+                    <select required value={newMatchData.homePlayerId} onChange={e => setNewMatchData({...newMatchData, homePlayerId: e.target.value})} className="bg-background-dark/80 border border-white/5 rounded-2xl px-4 py-3 text-sm text-white font-bold focus:border-primary/50 outline-none">
+                      <option value="" disabled>Select Home</option>
+                      {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name} {p.group ? `(${p.group})` : ''}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">Away Player</label>
+                    <select required value={newMatchData.awayPlayerId} onChange={e => setNewMatchData({...newMatchData, awayPlayerId: e.target.value})} className="bg-background-dark/80 border border-white/5 rounded-2xl px-4 py-3 text-sm text-white font-bold focus:border-primary/50 outline-none">
+                      <option value="" disabled>Select Away</option>
+                      {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name} {p.group ? `(${p.group})` : ''}</option>)}
+                    </select>
+                  </div>
+                  <button type="submit" className="h-[46px] bg-primary text-background-dark font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/10">Add Match</button>
+                </form>
+              )}
               <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-[300px] scrollbar-hide">
-                {matches.map(match => (
-                  <div key={match.id} className="p-5 bg-background-dark/50 border border-white/5 rounded-3xl flex items-center justify-between gap-6 hover:border-primary/20 transition-all group">
-                    <div className="flex-1 flex flex-col text-right">
-                      <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.homePlayerName}</span>
-                      <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">Home</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <input 
-                        type="number" 
-                        defaultValue={match.homeScore}
-                        onBlur={(e) => updateMatchScore(match.id, parseInt(e.target.value) || 0, match.awayScore)}
-                        className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl text-center text-primary font-black text-lg focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                      />
-                      <span className="text-white/20 font-black text-xl italic">:</span>
-                      <input 
-                        type="number" 
-                        defaultValue={match.awayScore}
-                        onBlur={(e) => updateMatchScore(match.id, match.homeScore, parseInt(e.target.value) || 0)}
-                        className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl text-center text-primary font-black text-lg focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                      />
-                    </div>
-                    <div className="flex-1 flex flex-col text-left">
-                      <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.awayPlayerName}</span>
-                      <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">Away</span>
+                {matches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(match => (
+                  <div key={match.id} className="p-5 flex flex-col gap-3 bg-background-dark/50 border border-white/5 rounded-3xl hover:border-primary/20 transition-all group relative">
+                    {overrideMode && (
+                      <button 
+                        onClick={() => deleteMatch(match.id)}
+                        className="absolute -top-3 -right-3 w-8 h-8 bg-secondary border-2 border-background-dark text-white rounded-full flex items-center justify-center hover:scale-110 shadow-lg transition-transform z-10"
+                        title="Delete Match"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {overrideMode && (
+                       <div className="flex justify-between items-center px-4">
+                         <input 
+                           value={match.stage || ''} 
+                           onChange={e => updateMatchDetails(match.id, { stage: e.target.value })} 
+                           className="bg-transparent text-[10px] font-black uppercase text-primary tracking-widest outline-none border-b border-white/10 focus:border-primary pb-1"
+                           placeholder="STAGE"
+                         />
+                         <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">#{match.matchIndex}</span>
+                       </div>
+                    )}
+                    <button 
+                      onClick={() => toggleMatchStatus(match.id, match.status)}
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black uppercase shadow-lg transition-all hover:scale-110 active:scale-95 border-2 border-background-dark ${
+                        match.status === 'completed' 
+                          ? 'bg-secondary text-white' 
+                          : 'bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/30'
+                      }`}
+                    >
+                      {match.status === 'completed' ? 'FT' : 'TBD'}
+                    </button>
+                    <div className="flex items-center justify-between gap-6 pl-4">
+                      <div className="flex-1 flex flex-col text-right">
+                        {overrideMode ? (
+                          <select 
+                            value={match.homePlayerId || ''} 
+                            onChange={(e) => {
+                              const targetId = e.target.value;
+                              const targetName = players.find(p => p.id === targetId)?.name || "TBD";
+                              updateMatchDetails(match.id, { homePlayerId: targetId, homePlayerName: targetName });
+                            }}
+                            className="bg-background-dark border border-white/5 rounded-xl px-2 py-1.5 text-xs text-white font-bold outline-none text-right"
+                          >
+                            <option value="">Select Home</option>
+                            {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        ) : (
+                          <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.homePlayerName}</span>
+                        )}
+                        {!overrideMode && <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{match.stage || "Home"}</span>}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <input 
+                          type="number" 
+                          defaultValue={match.homeScore}
+                          onBlur={(e) => updateMatchScore(match.id, parseInt(e.target.value) || 0, match.awayScore)}
+                          className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl text-center text-primary font-black text-lg focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        />
+                        <span className="text-white/20 font-black text-xl italic">:</span>
+                        <input 
+                          type="number" 
+                          defaultValue={match.awayScore}
+                          onBlur={(e) => updateMatchScore(match.id, match.homeScore, parseInt(e.target.value) || 0)}
+                          className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl text-center text-primary font-black text-lg focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                        />
+                      </div>
+                      <div className="flex-1 flex flex-col text-left">
+                        {overrideMode ? (
+                          <select 
+                            value={match.awayPlayerId || ''} 
+                            onChange={(e) => {
+                              const targetId = e.target.value;
+                              const targetName = players.find(p => p.id === targetId)?.name || "TBD";
+                              updateMatchDetails(match.id, { awayPlayerId: targetId, awayPlayerName: targetName });
+                            }}
+                            className="bg-background-dark border border-white/5 rounded-xl px-2 py-1.5 text-xs text-white font-bold outline-none"
+                          >
+                            <option value="">Select Away</option>
+                            {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        ) : (
+                          <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.awayPlayerName}</span>
+                        )}
+                        {!overrideMode && <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{match.group ? `Grp ${match.group}` : 'Away'}</span>}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1282,15 +1595,16 @@ export default function AdminDashboard() {
                     <p className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">Approved Roster Only</p>
                   </div>
                 </div>
-                {overrideMode ? (
-                  <div className="px-4 py-2 bg-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em] rounded-full animate-pulse border border-primary/20">
-                    Live Editing Mode
-                  </div>
-                ) : (
-                  <div className="px-4 py-2 bg-white/5 text-white/20 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/5">
-                    Viewing Mode
-                  </div>
-                )}
+                <button 
+                  onClick={() => setOverrideMode(!overrideMode)}
+                  className={`px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-full transition-all border ${
+                    overrideMode 
+                      ? 'bg-primary/20 text-primary border-primary/20 animate-pulse'
+                      : 'bg-white/5 text-white/40 border-white/5 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {overrideMode ? 'Live Editing Mode' : 'Viewing Mode'}
+                </button>
               </div>
               <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left">
