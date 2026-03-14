@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0FA4AF;
+  --color-secondary: #964734;
+  --color-background-light: #AFDDE5;
+  --color-background-dark: #003135;
+  --color-surface-dark: #024950;
+  --color-accent-dark: #024950;
+  --font-display: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background-dark text-slate-100 font-display min-h-screen;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-md border border-primary/10;
+  }
+  .neon-glow {
+    @apply shadow-[0_0_15px_rgba(15,164,175,0.3)];
+  }
+  .neon-text {
+    @apply text-primary drop-shadow-[0_0_10px_rgba(15,164,175,0.5)];
+  }
+  .ucl-gradient {
+    @apply bg-[radial-gradient(circle_at_center,rgba(15,164,175,0.15)_0%,rgba(0,49,53,1)_70%)];
+  }
+}

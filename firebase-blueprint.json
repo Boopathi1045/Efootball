@@ -1,0 +1,176 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "A registered player in the tournament.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the player."
+        },
+        "phone": {
+          "type": "string",
+          "description": "WhatsApp number."
+        },
+        "efootballId": {
+          "type": "string",
+          "description": "eFootball Unique ID."
+        },
+        "paymentScreenshotUrl": {
+          "type": "string",
+          "description": "URL of the uploaded payment screenshot."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "banned"],
+          "description": "Registration status."
+        },
+        "group": {
+          "type": "string",
+          "enum": ["A", "B", "None"],
+          "description": "Assigned group."
+        },
+        "points": {
+          "type": "number",
+          "description": "Points in the group stage."
+        },
+        "gd": {
+          "type": "number",
+          "description": "Goal difference in the group stage."
+        },
+        "played": {
+          "type": "number",
+          "description": "Matches played."
+        },
+        "wins": {
+          "type": "number",
+          "description": "Matches won."
+        },
+        "draws": {
+          "type": "number",
+          "description": "Matches drawn."
+        },
+        "losses": {
+          "type": "number",
+          "description": "Matches lost."
+        },
+        "seed": {
+          "type": "number",
+          "description": "Seed number for the draw."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "phone", "efootballId", "status", "group", "points", "gd", "played", "wins", "draws", "losses", "createdAt"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "A tournament match.",
+      "type": "object",
+      "properties": {
+        "homePlayerId": {
+          "type": "string"
+        },
+        "homePlayerName": {
+          "type": "string"
+        },
+        "awayPlayerId": {
+          "type": "string"
+        },
+        "awayPlayerName": {
+          "type": "string"
+        },
+        "homeScore": {
+          "type": "number"
+        },
+        "awayScore": {
+          "type": "number"
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["group", "quarter-final", "semi-final", "final"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["scheduled", "completed"]
+        },
+        "group": {
+          "type": "string",
+          "enum": ["A", "B", "None"]
+        },
+        "matchIndex": {
+          "type": "number"
+        }
+      },
+      "required": ["homePlayerId", "homePlayerName", "awayPlayerId", "awayPlayerName", "homeScore", "awayScore", "stage", "status", "group"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Tournament settings.",
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "string"
+        },
+        "activeStage": {
+          "type": "string",
+          "enum": ["registration", "draw", "groups", "knockout"]
+        },
+        "entryFee": {
+          "type": "string"
+        },
+        "paymentNumber": {
+          "type": "string"
+        },
+        "paymentQrUrl": {
+          "type": "string"
+        }
+      },
+      "required": ["rules", "activeStage"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Admin user.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"]
+        }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "players": {
+      "schema": {
+        "$ref": "#/entities/Player"
+      },
+      "description": "Collection of all registered players."
+    },
+    "matches": {
+      "schema": {
+        "$ref": "#/entities/Match"
+      },
+      "description": "Collection of all matches."
+    },
+    "settings": {
+      "schema": {
+        "$ref": "#/entities/Setting"
+      },
+      "description": "Tournament settings (singleton document 'global')."
+    },
+    "users": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Admin users."
+    }
+  }
+}
