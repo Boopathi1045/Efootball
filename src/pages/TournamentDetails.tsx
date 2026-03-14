@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, where, doc } from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
 import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
@@ -12,31 +11,82 @@ export default function TournamentDetails() {
   const [activeStage, setActiveStage] = useState("registration");
   const [activeTab, setActiveTab] = useState("overview");
 
+  const [activeTournament, setActiveTournament] = useState<any>(null);
+
   useEffect(() => {
-    const unsubSettings = onSnapshot(doc(db, "settings", "global"), (doc) => {
-      if (doc.exists()) {
-        setRules(doc.data().rules || "");
-        setActiveStage(doc.data().activeStage || "registration");
+    const fetchTournament = async () => {
+      let data: any[] | null = null;
+      let error: Error | null = null;
+
+      if (id) {
+        const decodedId = decodeURIComponent(id);
+        const result = await supabase.from('tournaments').select('*').or(`id.eq.${decodedId},name.eq.${decodedId}`);
+        data = result.data;
+        error = result.error;
+      } else {
+        const result = await supabase.from('tournaments').select('*').eq('isHidden', false).order('createdAt', { ascending: false }).limit(1);
+        data = result.data;
+        error = result.error;
       }
-    });
 
-    const unsubPlayers = onSnapshot(query(collection(db, "players"), where("status", "==", "approved")), (snapshot) => {
-      setPlayers(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+      if (data && data.length > 0) {
+        const target = data[0];
+        setActiveTournament(target);
+        setRules(target.rules || "");
+        setActiveStage(target.activeStage || "registration");
+      }
+    };
 
-    const unsubMatches = onSnapshot(collection(db, "matches"), (snapshot) => {
-      setMatches(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    fetchTournament();
+
+    const channel = supabase.channel('details_tournament')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, fetchTournament)
+      .subscribe();
 
     return () => {
-      unsubSettings();
-      unsubPlayers();
-      unsubMatches();
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [id]);
 
-  const groupA = players.filter(p => p.group === "A").sort((a, b) => b.points - a.points || b.gd - a.gd);
-  const groupB = players.filter(p => p.group === "B").sort((a, b) => b.points - a.points || b.gd - a.gd);
+  useEffect(() => {
+    if (!activeTournament) return;
+
+    const fetchData = async () => {
+      const { data: pData } = await supabase
+        .from('players')
+        .select('*')
+        .eq('status', 'approved')
+        .eq('tournamentId', activeTournament.id);
+      if (pData) setPlayers(pData);
+
+      const { data: mData } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournamentId', activeTournament.id);
+      if (mData) setMatches(mData);
+    };
+
+    fetchData();
+
+    const playerChannel = supabase.channel('details_players')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `tournamentId=eq.${activeTournament.id}` }, fetchData)
+      .subscribe();
+
+    const matchChannel = supabase.channel('details_matches')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournamentId=eq.${activeTournament.id}` }, fetchData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(playerChannel);
+      supabase.removeChannel(matchChannel);
+    };
+  }, [activeTournament?.id]);
+
+  const groups = Array.from(new Set(players.filter(p => p.group && p.group !== "None").map(p => p.group as string))).sort();
+  const groupedPlayers = groups.reduce((acc: Record<string, any[]>, group: string) => {
+    acc[group] = players.filter(p => p.group === group).sort((a, b) => b.points - a.points || b.gd - a.gd);
+    return acc;
+  }, {});
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Info },
@@ -53,7 +103,7 @@ export default function TournamentDetails() {
             <ChevronLeft className="w-6 h-6" />
           </Link>
           <Trophy className="text-primary w-8 h-8" />
-          <h2 className="text-xl font-bold hidden sm:block">Tournament Details</h2>
+          <h2 className="text-xl font-bold hidden sm:block">{activeTournament?.name || "Tournament Details"}</h2>
         </div>
         <div className="flex gap-4">
           <Link to="/register" className="px-4 py-2 bg-secondary text-white rounded-xl font-bold hover:brightness-110 transition-all shadow-[0_0_10px_rgba(150,71,52,0.4)]">
@@ -64,7 +114,7 @@ export default function TournamentDetails() {
 
       <main className="flex-1 px-6 md:px-20 py-8 max-w-[1400px] mx-auto w-full space-y-8">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black leading-tight text-white">Elite Championship 2024</h1>
+          <h1 className="text-4xl font-black leading-tight text-white">{activeTournament?.name || "Loading..."}</h1>
           <p className="text-primary/70 text-lg font-medium">Pro League | Phase: {activeStage.toUpperCase()}</p>
         </div>
 
@@ -148,9 +198,19 @@ export default function TournamentDetails() {
                   <p>Standings will be available once the group stage begins.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <GroupTable name="GROUP A" players={groupA} />
-                  <GroupTable name="GROUP B" players={groupB} />
+                <div 
+                  className="grid gap-8"
+                  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}
+                >
+                  {groups.map((grp: string) => (
+                    <GroupTable key={grp} name={`GROUP ${grp}`} players={groupedPlayers[grp]} />
+                  ))}
+                  {groups.length === 0 && (
+                    <div className="col-span-full glass-panel p-12 rounded-xl text-center text-background-light/70 flex flex-col items-center gap-4 border border-primary/20">
+                      <LayoutGrid className="w-12 h-12 text-primary/30" />
+                      <p>No groups assigned yet.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -164,30 +224,41 @@ export default function TournamentDetails() {
                   <p>Fixtures will be generated soon.</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {matches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(match => (
-                    <div key={match.id} className="glass-panel p-4 rounded-xl border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-2 text-xs font-bold text-primary/70 uppercase w-full md:w-32">
-                        <span className="px-2 py-1 bg-primary/10 rounded">{match.stage}</span>
-                        {match.group && match.group !== 'None' && <span>Grp {match.group}</span>}
-                      </div>
-                      
-                      <div className="flex-1 flex items-center justify-center gap-4 w-full">
-                        <div className="flex-1 text-right font-bold text-white truncate">{match.homePlayerName}</div>
-                        <div className="px-4 py-2 bg-background-dark rounded-lg border border-primary/10 font-mono font-bold text-lg flex items-center gap-2 min-w-[80px] justify-center">
-                          <span className={match.homeScore > match.awayScore ? "text-secondary" : "text-background-light"}>{match.homeScore}</span>
-                          <span className="text-background-light/50">-</span>
-                          <span className={match.awayScore > match.homeScore ? "text-secondary" : "text-background-light"}>{match.awayScore}</span>
-                        </div>
-                        <div className="flex-1 text-left font-bold text-white truncate">{match.awayPlayerName}</div>
-                      </div>
-
-                      <div className="w-full md:w-24 text-right">
-                        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${
-                          match.status === 'completed' ? 'bg-secondary text-white' : 'bg-background-light/20 text-background-light/70'
-                        }`}>
-                          {match.status}
-                        </span>
+                <div className="flex flex-col gap-8">
+                  {Object.entries(
+                    matches.reduce((acc: Record<string, any[]>, m) => {
+                      const r = m.round || "Unassigned";
+                      if (!acc[r]) acc[r] = [];
+                      acc[r].push(m);
+                      return acc;
+                    }, {})
+                  ).sort(([a], [b]) => a.localeCompare(b)).map(([roundName, roundMatches]) => (
+                    <div key={roundName} className="space-y-4">
+                      <h3 className="text-xl font-black italic uppercase tracking-widest text-primary border-b border-primary/20 pb-2">
+                        {roundName}
+                      </h3>
+                      <div className="grid gap-3">
+                        {(roundMatches as any[]).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(match => (
+                          <div key={match.id} className="glass-panel p-4 rounded-xl border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 hover:border-primary/40 transition-colors">
+                            <div className="flex items-center gap-2 text-xs font-bold text-primary/70 uppercase w-full md:w-32">
+                              {match.status === 'completed' ? (
+                                <span className="px-2 py-1 bg-secondary border border-secondary text-white rounded">FT</span>
+                              ) : (
+                                <span className="px-2 py-1 bg-primary/10 border border-primary/30 rounded text-primary">TBD</span>
+                              )}
+                            </div>
+                            
+                            <div className="flex-1 flex items-center justify-center gap-4 w-full">
+                              <div className="flex-1 text-right font-bold text-white truncate">{match.homePlayerName}</div>
+                              <div className="px-4 py-2 bg-background-dark rounded-lg border border-primary/10 font-mono font-bold flex items-center gap-2 min-w-[80px] justify-center">
+                                <span className={match.homeScore > match.awayScore ? "text-secondary text-lg" : "text-background-light text-md"}>{match.homeScore ?? '-'}</span>
+                                <span className="text-background-light/30 text-xs mt-1">VS</span>
+                                <span className={match.awayScore > match.homeScore ? "text-secondary text-lg" : "text-background-light text-md"}>{match.awayScore ?? '-'}</span>
+                              </div>
+                              <div className="flex-1 text-left font-bold text-white truncate">{match.awayPlayerName}</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
@@ -201,7 +272,7 @@ export default function TournamentDetails() {
   );
 }
 
-function GroupTable({ name, players }: { name: string, players: any[] }) {
+function GroupTable({ name, players }: { key?: string | number, name: string, players: any[] }) {
   return (
     <div className="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden">
       <div className="bg-primary/10 px-6 py-4 border-b border-primary/10">

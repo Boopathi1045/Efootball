@@ -1,28 +1,46 @@
 import { useState, useEffect } from "react";
 import { Trophy, Calendar, Users, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { db } from "../firebase";
+import { supabase } from "../supabase";
 
 export default function Home() {
   const [playerCount, setPlayerCount] = useState(0);
+  const [tournaments, setTournaments] = useState<any[]>([]);
 
   useEffect(() => {
-    const unsubPlayers = onSnapshot(query(collection(db, "players"), where("status", "==", "approved")), (snapshot) => {
-      setPlayerCount(snapshot.size);
-    });
-    return () => unsubPlayers();
-  }, []);
+    const fetchData = async () => {
+      // Fetch approved player count
+      const { count } = await supabase
+        .from('players')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved');
+      setPlayerCount(count || 0);
 
-  const tournaments = [
-    { 
-      id: "elite-2024", 
-      name: "Elite Championship 2024", 
-      status: "Active", 
-      participants: playerCount, 
-      date: "Mar 2024" 
-    }
-  ];
+      // Fetch tournaments
+      const { data } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('isHidden', false)
+        .order('createdAt', { ascending: false });
+      if (data) setTournaments(data);
+    };
+
+    fetchData();
+
+    // Setup realtime subscriptions
+    const playerChannel = supabase.channel('home_players')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, fetchData)
+      .subscribe();
+
+    const tourneyChannel = supabase.channel('home_tournaments')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, fetchData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(playerChannel);
+      supabase.removeChannel(tourneyChannel);
+    };
+  }, []);
 
   return (
     <div 
@@ -44,10 +62,13 @@ export default function Home() {
       <main className="flex-1 px-6 md:px-20 py-12 max-w-[1000px] mx-auto w-full space-y-8">
         <h1 className="text-4xl font-black text-white mb-8">Tournaments</h1>
         <div className="grid gap-4">
+          {tournaments.length === 0 && (
+            <div className="glass-panel p-6 text-center text-background-light font-bold">No Tournaments Found.</div>
+          )}
           {tournaments.map(t => (
             <Link 
               key={t.id} 
-              to={`/tournament/${t.id}`} 
+              to={`/tournament/${encodeURIComponent(t.name)}`} 
               className="glass-panel p-6 rounded-xl hover:bg-primary/5 transition-all border border-primary/20 flex items-center justify-between group"
             >
               <div className="flex items-center gap-6">
@@ -57,9 +78,8 @@ export default function Home() {
                 <div>
                   <h3 className="text-2xl font-bold text-white group-hover:text-background-light transition-colors">{t.name}</h3>
                   <div className="flex items-center gap-4 text-sm text-background-light/80 mt-2">
-                    <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {t.date}</span>
-                    <span className="flex items-center gap-1"><Users className="w-4 h-4" /> {t.participants} Players</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-secondary text-white">{t.status}</span>
+                    <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(t.createdAt || Date.now()).toLocaleDateString()}</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-secondary text-white">{t.activeStage || "registration"}</span>
                   </div>
                 </div>
               </div>
