@@ -477,43 +477,46 @@ function BracketView({ matches, tournament, playerCount }: { matches: any[], tou
   const finalMatchRaw = matches.find(m => m.round === "Grand Final");
 
   // 1.5 Helper to get Winner Name for a slot if the match is completed
-  const getWinnerForMatchIndex = (roundMatches: any[], index: number) => {
-    const match = roundMatches.find(m => (m.matchIndex ?? roundMatches.indexOf(m)) === index);
+  const getWinnerForMatchIndex = (roundMatches: any[], matchIdx: number) => {
+    // Look for exact matchIndex (1-based)
+    const match = roundMatches.find(m => (m.matchIndex || (roundMatches.indexOf(m) + 1)) === matchIdx);
     if (!match || match.status !== 'completed') return null;
     return match.homeScore > match.awayScore ? match.homePlayerName : match.awayPlayerName;
   };
 
   // 2. Map QF Slots (potentially showing winners from R16)
   const qfMatches = Array.from({ length: 4 }, (_, i) => {
-    const existing = rawQfMatches.find(m => (m.matchIndex ?? rawQfMatches.indexOf(m)) === i);
+    const mIdx = i + 1;
+    const existing = rawQfMatches.find(m => (m.matchIndex || (rawQfMatches.indexOf(m) + 1)) === mIdx);
     if (existing) return existing;
     
-    // Live advancement from R16 if R16 matches exist
+    // Live advancement from R16 mapping: QF1Home=M1, QF1Away=M2, QF2Home=M3, QF2Away=M4...
     let home = 'TBD';
     let away = 'TBD';
     if (showR16) {
-      home = getWinnerForMatchIndex(r16MatchesRaw, i * 2) || 'TBD';
-      away = getWinnerForMatchIndex(r16MatchesRaw, i * 2 + 1) || 'TBD';
+      home = getWinnerForMatchIndex(r16MatchesRaw, i * 2 + 1) || 'TBD';
+      away = getWinnerForMatchIndex(r16MatchesRaw, i * 2 + 2) || 'TBD';
     }
-    return { id: `p-qf-${i}`, round: 'Quarter Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: i };
+    return { id: `p-qf-${mIdx}`, round: 'Quarter Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: mIdx };
   });
 
   // 3. Map SF Slots (potentially showing winners from QF)
   const sfMatches = Array.from({ length: 2 }, (_, i) => {
-    const existing = rawSfMatches.find(m => (m.matchIndex ?? rawSfMatches.indexOf(m)) === i);
+    const mIdx = i + 1;
+    const existing = rawSfMatches.find(m => (m.matchIndex || (rawSfMatches.indexOf(m) + 1)) === mIdx);
     if (existing) return existing;
     
-    // Live advancement from QF
-    const home = getWinnerForMatchIndex(qfMatches, i * 2) || 'TBD';
-    const away = getWinnerForMatchIndex(qfMatches, i * 2 + 1) || 'TBD';
-    return { id: `p-sf-${i}`, round: 'Semi Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: i };
+    // Live advancement from QF: SF1Home=QF1Winner, SF1Away=QF2Winner
+    const home = getWinnerForMatchIndex(qfMatches, i * 2 + 1) || 'TBD';
+    const away = getWinnerForMatchIndex(qfMatches, i * 2 + 2) || 'TBD';
+    return { id: `p-sf-${mIdx}`, round: 'Semi Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: mIdx };
   });
 
   // 4. Map Grand Final
   const finalMatch = finalMatchRaw || (() => {
-    const home = getWinnerForMatchIndex(sfMatches, 0) || 'TBD';
-    const away = getWinnerForMatchIndex(sfMatches, 1) || 'TBD';
-    return { id: 'p-final', round: 'Grand Final', homePlayerName: home, awayPlayerName: away, status: 'pending' };
+    const home = getWinnerForMatchIndex(sfMatches, 1) || 'TBD';
+    const away = getWinnerForMatchIndex(sfMatches, 2) || 'TBD';
+    return { id: 'p-final', round: 'Grand Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: 1 };
   })();
 
   // ─── Layout constants ─────────
