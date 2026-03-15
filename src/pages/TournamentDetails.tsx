@@ -139,7 +139,69 @@ export default function TournamentDetails() {
 
         <div className="pt-4">
           {activeTab === "overview" && (
-            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+              {/* Prize section — driven by isPaid toggle */}
+              {activeTournament?.isPaid ? (
+                // PAID: show prize tier breakdown
+                (() => {
+                  const tiers = [
+                    { key: "prize1st", emoji: "🥇", label: "Winner",    color: "text-yellow-400",  border: "border-yellow-500/30", bg: "bg-yellow-500/10" },
+                    { key: "prize2nd", emoji: "🥈", label: "Runner-up", color: "text-slate-300",   border: "border-slate-400/20",  bg: "bg-slate-400/10" },
+                    { key: "prize3rd", emoji: "🥉", label: "3rd Place", color: "text-amber-600",   border: "border-amber-700/25",  bg: "bg-amber-700/10" },
+                    { key: "prize4th", emoji: "4️⃣", label: "4th Place", color: "text-white/50",    border: "border-white/10",      bg: "bg-white/5" },
+                  ].filter(t => !!(activeTournament as any)?.[t.key]);
+
+                  return (
+                    <div className="rounded-2xl border border-yellow-500/20 overflow-hidden">
+                      <div className="flex items-center gap-3 px-5 py-4 bg-yellow-500/10 border-b border-yellow-500/20">
+                        <Trophy className="w-5 h-5 text-yellow-400" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.25em] text-yellow-400">Prize Pool</span>
+                      </div>
+                      <div className="divide-y divide-white/5 bg-background-dark/60">
+                        {tiers.length > 0 ? tiers.map(({ key, emoji, label, color, border, bg }) => (
+                          <div key={key} className="flex items-center justify-between px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-xl ${bg} border ${border} flex items-center justify-center text-base shrink-0`}>
+                                {emoji}
+                              </div>
+                              <span className="text-sm font-bold text-white/70">{label}</span>
+                            </div>
+                            <span className={`text-xl font-black italic ${color}`}>
+                              ₹{(activeTournament as any)[key]}
+                            </span>
+                          </div>
+                        )) : (
+                          // Paid but no amounts filled yet — show placeholders
+                          [
+                            { emoji: "🥇", label: "Winner" },
+                            { emoji: "🥈", label: "Runner-up" },
+                          ].map(({ emoji, label }) => (
+                            <div key={label} className="flex items-center justify-between px-5 py-4 opacity-40">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">{emoji}</div>
+                                <span className="text-sm font-bold text-white/50">{label}</span>
+                              </div>
+                              <span className="text-sm font-black italic text-white/30">TBA</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                // FREE: no entry, no prize
+                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl border border-white/5 bg-white/[0.02]">
+                  <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">🆓</div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-black text-white/60 uppercase tracking-wide">No Entry · No Prize</span>
+                    <span className="text-[11px] text-white/30 font-bold">This is a free tournament</span>
+                  </div>
+                </div>
+              )}
+
+
+              {/* Rules / Instructions */}
               <div className="p-1 rounded-xl bg-gradient-to-r from-primary/50 via-primary to-primary/50 neon-glow">
                 <div className="flex flex-col md:flex-row bg-background-dark p-6 rounded-lg gap-8">
                   <div className="w-full md:w-1/3 aspect-video bg-surface-dark rounded-lg flex items-center justify-center border border-primary/20">
@@ -158,6 +220,8 @@ export default function TournamentDetails() {
               </div>
             </section>
           )}
+
+
 
           {activeTab === "bracket" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-x-auto pb-12 scrollbar-hide">
@@ -397,38 +461,66 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
 }
 
 function BracketView({ matches }: { matches: any[] }) {
-  const qfMatches = matches.filter(m => m.round === "Quarter Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
-  
-  // Always ensure at least 2 slots for Semi Finals if none exist, to show the structure
+  // Always ensure at least 4 QF slots if none exist
+  const rawQfMatches = matches.filter(m => m.round === "Quarter Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  const qfMatches = rawQfMatches.length > 0 ? rawQfMatches : [
+    { id: 'p-qf-1', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
+    { id: 'p-qf-2', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
+    { id: 'p-qf-3', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
+    { id: 'p-qf-4', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
+  ];
+
+  // Always ensure at least 2 SF slots
   const rawSfMatches = matches.filter(m => m.round === "Semi Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
   const sfMatches = rawSfMatches.length > 0 ? rawSfMatches : [
     { id: 'p-sf-1', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-    { id: 'p-sf-2', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' }
+    { id: 'p-sf-2', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
   ];
 
   const finalMatch = matches.find(m => m.round === "Grand Final");
 
+  // ─── Layout constants (px, must match CSS used in MatchNode below) ─────────
+  // title ~18px + flex-1 card with 2 rows (py-3≈12px + text≈22px each) = 18+2*46 = 110px... use 128
+  const CH = 128;   // fixed card height in px
+  const QG = 48;    // QF gap: gap-12 = 3rem = 48px
+  const CW = 52;    // connector SVG width
+  const cx = CW / 2;
+
+  // Y centre of each QF card within the full column
+  const qf1 = CH / 2;                    // 64
+  const qf2 = qf1 + CH + QG;             // 240
+  const qf3 = qf2 + CH + QG;             // 416
+  const qf4 = qf3 + CH + QG;             // 592
+  // SF targets = midpoint of each QF pair
+  const sf1 = (qf1 + qf2) / 2;          // 152
+  const sf2 = (qf3 + qf4) / 2;          // 504
+  const totalH = 4 * CH + 3 * QG;       // 656 — full column height
+  const finalY  = (sf1 + sf2) / 2;      // 328 — where Final card centre lands
+  const sfTop = sf1 - CH / 2;           // 88  — push SF column down
+  const sfGap = sf2 - sf1 - CH;         // 224 — gap between SF items
+  const LINE = 'rgba(255,255,255,0.18)';
+
   const MatchNode = ({ match, title }: { match: any, title: string }) => (
-    <div className="flex flex-col gap-3 min-w-[260px] group/match">
-      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-0.5 italic px-2 group-hover/match:text-white transition-colors">
+    <div className="flex flex-col gap-2 min-w-[260px] group/match" style={{ height: CH }}>
+      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] italic px-2 group-hover/match:text-white transition-colors leading-tight">
         {title}
       </span>
-      <div className="relative p-[1px] rounded-2xl bg-gradient-to-r from-primary/40 via-primary/5 to-transparent transition-all duration-500 group-hover/match:from-primary/60">
-        <div className="bg-background-dark/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-white/5">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 hover:bg-white/[0.03] transition-all gap-4">
-            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white scale-105 origin-left' : 'text-white/40'} transition-all`}>
+      <div className="relative p-[1px] rounded-2xl bg-gradient-to-r from-primary/40 via-primary/5 to-transparent group-hover/match:from-primary/60 transition-all duration-500 flex-1">
+        <div className="bg-background-dark/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-white/5 h-full flex flex-col justify-around">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 hover:bg-white/[0.03] transition-all gap-4">
+            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate transition-all ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
               {match.homePlayerName}
             </span>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.homeScore > match.awayScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
-              {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.homeScore > match.awayScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
+              {match.status === 'completed' ? (match.homeScore ?? 0) : '—'}
             </div>
           </div>
-          <div className="flex items-center justify-between px-5 py-4 hover:bg-white/[0.03] transition-all gap-4">
-            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white scale-105 origin-left' : 'text-white/40'} transition-all`}>
+          <div className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.03] transition-all gap-4">
+            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate transition-all ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
               {match.awayPlayerName}
             </span>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.awayScore > match.homeScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
-              {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.awayScore > match.homeScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
+              {match.status === 'completed' ? (match.awayScore ?? 0) : '—'}
             </div>
           </div>
         </div>
@@ -437,82 +529,72 @@ function BracketView({ matches }: { matches: any[] }) {
   );
 
   return (
-    <div className="flex gap-16 py-8 items-center min-w-[max-content]">
-      {/* Quarter Finals */}
-      {qfMatches.length > 0 && (
-        <div className="flex flex-col gap-12">
-          {qfMatches.map((m, i) => (
-            <div key={m.id} className="relative">
-              <MatchNode match={m} title={`Quarter-Final ${i + 1}`} />
-              <div className="absolute top-1/2 -right-16 w-16 h-px bg-white/10" />
-              {i % 2 === 0 ? (
-                <div className="absolute top-1/2 -right-16 h-[88px] w-px bg-white/10" />
-              ) : (
-                <div className="absolute bottom-1/2 -right-16 h-[88px] w-px bg-white/10" />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Semi Finals */}
-      <div className="flex flex-col gap-40">
-        {sfMatches.map((m, i) => (
-          <div key={m.id} className="relative">
-            <MatchNode match={m} title={`Semi-Final ${i + 1}`} />
-            <div className="absolute top-1/2 -right-16 w-16 h-px bg-white/10" />
-            {i % 2 === 0 ? (
-              <div className="absolute top-1/2 -right-16 h-[140px] w-px bg-white/10" />
-            ) : (
-              <div className="absolute bottom-1/2 -right-16 h-[140px] w-px bg-white/10" />
-            )}
-          </div>
+    <div className="flex items-start py-8 pb-12 overflow-x-auto">
+      {/* ── Quarter Finals ── */}
+      <div className="flex flex-col shrink-0" style={{ gap: QG }}>
+        {qfMatches.map((m, i) => (
+          <div key={m.id}><MatchNode match={m} title={`Quarter-Final ${i + 1}`} /></div>
         ))}
       </div>
 
-      {/* Grand Final Card */}
-      <div className="ml-8">
-        <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_50px_rgba(15,164,175,0.2)] w-full max-w-[360px] mx-auto">
-          <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-8 md:p-12 flex flex-col items-center gap-6 md:gap-8 text-center border border-white/5">
+      {/* ── QF → SF connector SVG ── */}
+      <svg width={CW} height={totalH} className="shrink-0" style={{ overflow: 'visible' }}>
+        <path stroke={LINE} strokeWidth="1.5" fill="none" d={[
+          `M 0 ${qf1} H ${cx} V ${qf2}`, `M 0 ${qf2} H ${cx}`, `M ${cx} ${sf1} H ${CW}`,
+          `M 0 ${qf3} H ${cx} V ${qf4}`, `M 0 ${qf4} H ${cx}`, `M ${cx} ${sf2} H ${CW}`,
+        ].join(' ')} />
+      </svg>
+
+      {/* ── Semi Finals — offset so cards land exactly at sf1/sf2 ── */}
+      <div className="flex flex-col shrink-0" style={{ marginTop: sfTop, gap: sfGap }}>
+        {sfMatches.map((m, i) => (
+          <div key={m.id}><MatchNode match={m} title={`Semi-Final ${i + 1}`} /></div>
+        ))}
+      </div>
+
+      {/* ── SF → Final connector SVG ── */}
+      <svg width={CW} height={totalH} className="shrink-0">
+        <path stroke={LINE} strokeWidth="1.5" fill="none" d={[
+          `M 0 ${sf1} H ${cx} V ${sf2}`, `M 0 ${sf2} H ${cx}`, `M ${cx} ${finalY} H ${CW}`,
+        ].join(' ')} />
+      </svg>
+
+      {/* ── Grand Final — flex-centred so its middle aligns with finalY ── */}
+      <div className="shrink-0 flex items-center" style={{ height: totalH }}>
+        <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_50px_rgba(15,164,175,0.2)] w-[320px]">
+          <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-8 flex flex-col items-center gap-5 text-center border border-white/5">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-              <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30 shadow-[0_0_30px_rgba(15,164,175,0.2)]">
-                <Trophy className="w-12 h-12 text-primary" />
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30">
+                <Trophy className="w-10 h-10 text-primary" />
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
-              <p className="text-[11px] text-white/30 uppercase font-black tracking-[0.4em]">The Ultimate Showdown</p>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
+              <p className="text-[10px] text-white/30 uppercase font-black tracking-[0.4em]">The Ultimate Showdown</p>
             </div>
-            
-            <div className="flex flex-col gap-6 w-full py-4 relative">
-              <div className="flex flex-col gap-1">
-                <div className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white truncate px-4">
-                  {finalMatch ? finalMatch.homePlayerName : "TBD"}
-                </div>
-                <div className="flex items-center justify-center gap-4 py-2">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/30" />
-                  <span className="text-primary font-black italic text-xl tracking-widest px-2">VS</span>
-                  <div className="h-px flex-1 bg-gradient-to-l from-transparent to-primary/30" />
-                </div>
-                <div className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white truncate px-4">
-                  {finalMatch ? finalMatch.awayPlayerName : "TBD"}
-                </div>
+            <div className="flex flex-col gap-3 w-full">
+              <div className="text-xl font-black italic uppercase tracking-tighter text-white truncate px-4">
+                {finalMatch ? finalMatch.homePlayerName : "TBD"}
               </div>
-              
-              <div className="mt-4 px-6 py-3 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-md">
-                <span className="text-xs font-black text-white/40 uppercase tracking-[0.2em]">
-                  {finalMatch?.status === 'completed' ? (
-                    <span className="flex items-center justify-center gap-3">
-                      Result: <span className="text-primary text-lg">{finalMatch.homeScore} - {finalMatch.awayScore}</span>
-                    </span>
-                  ) : "Match Pending"}
-                </span>
+              <div className="flex items-center gap-4 px-4">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/30" />
+                <span className="text-primary font-black italic text-lg tracking-widest">VS</span>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-primary/30" />
+              </div>
+              <div className="text-xl font-black italic uppercase tracking-tighter text-white truncate px-4">
+                {finalMatch ? finalMatch.awayPlayerName : "TBD"}
               </div>
             </div>
-
-
+            <div className="w-full px-4 py-3 bg-white/5 rounded-2xl border border-white/5">
+              <span className="text-xs font-black text-white/40 uppercase tracking-[0.2em]">
+                {finalMatch?.status === 'completed' ? (
+                  <span className="flex items-center justify-center gap-3">
+                    Result: <span className="text-primary">{finalMatch.homeScore} – {finalMatch.awayScore}</span>
+                  </span>
+                ) : "Match Pending"}
+              </span>
+            </div>
           </div>
         </div>
       </div>

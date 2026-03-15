@@ -814,6 +814,25 @@ Match duration: 15 minutes + Extra Time + penalty`);
               </label>
             </div>
 
+            {/* Paid Tournament Toggle */}
+            <div
+              className={`p-4 rounded-2xl border mb-6 flex items-center justify-between cursor-pointer transition-all duration-300 ${selectedTournament?.isPaid ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-background-dark/50 border-white/5'}`}
+              onClick={() => updateSettings("isPaid", !selectedTournament?.isPaid)}
+            >
+              <div className="flex flex-col">
+                <span className={`text-sm font-bold uppercase tracking-tight italic ${selectedTournament?.isPaid ? 'text-yellow-400' : 'text-white/50'}`}>
+                  {selectedTournament?.isPaid ? "💰 Paid Tournament" : "🆓 Free Tournament"}
+                </span>
+                <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-tight">
+                  {selectedTournament?.isPaid ? "Entry fee required — prizes shown" : "No entry, no prize shown"}
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
+                <input type="checkbox" className="sr-only peer" checked={!!selectedTournament?.isPaid} readOnly />
+                <div className="w-12 h-6.5 bg-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white/20 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500 after:peer-checked:bg-white shadow-inner"></div>
+              </label>
+            </div>
+
             <div className="space-y-5">
               <div className="space-y-2">
                 <label className="text-[11px] font-extrabold text-white/40 uppercase tracking-wider ml-1">Current Live Phase</label>
@@ -843,6 +862,26 @@ Match duration: 15 minutes + Extra Time + penalty`);
                     placeholder="0 for Free"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (₹) — Fill what applies</label>
+                {[
+                  { key: "prize1st", emoji: "🥇", label: "1st — Winner" },
+                  { key: "prize2nd", emoji: "🥈", label: "2nd — Runner-up" },
+                  { key: "prize3rd", emoji: "🥉", label: "3rd Place" },
+                  { key: "prize4th", emoji: "4️⃣", label: "4th Place" },
+                ].map(({ key, emoji, label }) => (
+                  <div key={key} className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">{emoji}</span>
+                    <input
+                      value={(selectedTournament as any)?.[key] || ""}
+                      onChange={(e) => updateSettings(key, e.target.value)}
+                      className="w-full bg-background-dark/50 border border-white/5 text-sm font-black rounded-2xl text-white py-3 pl-10 pr-4 focus:ring-1 focus:ring-primary outline-none placeholder-white/20"
+                      placeholder={label}
+                    />
+                  </div>
+                ))}
               </div>
 
               <div className="space-y-2 text-white/30">
