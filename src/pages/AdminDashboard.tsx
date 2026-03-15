@@ -33,6 +33,8 @@ export default function AdminDashboard() {
   const [isMatchDrawing, setIsMatchDrawing] = useState(false);
   const [shuffleNames, setShuffleNames] = useState({ home: "SHUFFLING", away: "SHUFFLING" });
   const [groupAssignments, setGroupAssignments] = useState<{ [key: string]: any[] }>({});
+  const [targetQualifiers, setTargetQualifiers] = useState<number>(4);
+  const [qualifiersPerGroup, setQualifiersPerGroup] = useState<number>(2);
 
   const [showManualPlayerForm, setShowManualPlayerForm] = useState(false);
   const [manualPlayerData, setManualPlayerData] = useState({ name: "", efootballId: "", phone: "" });
@@ -190,6 +192,7 @@ export default function AdminDashboard() {
       const match = matches.find(m => m.id === id);
       if (match?.status === 'completed' && selectedTournament) {
         await recalculateStandings(selectedTournament.id);
+        await autoAdvanceStage(selectedTournament.id);
       }
     }
   };
@@ -273,33 +276,39 @@ export default function AdminDashboard() {
     let nextStage = "";
     let qualifiedPlayerIds: string[] = [];
 
-    if (latestStage.startsWith('Group')) {
-      // Transition from Groups to Knockout
-      // Find all groups
-      const groupNames = Array.from(new Set(allMatches.filter(m => m.round?.startsWith('Group')).map(m => m.round!.replace('Group ', ''))));
+    const format = (selectedTournament.format || "knockout").toLowerCase();
+    const targetQuals = selectedTournament.target_qualifiers || 4;
+    const qualsPerGroup = selectedTournament.qualifiers_per_group || 2;
 
-      // Fetch players to get standings
+    const lowerStage = latestStage.toLowerCase();
+
+    if (lowerStage.startsWith('group')) {
+      // Transition from Groups to Knockout
+      const groupNames = Array.from(new Set(allMatches.filter(m => m.round?.toLowerCase().startsWith('group')).map(m => m.round!.split(' ').pop()))).sort();
+
       const { data: players } = await supabase.from('players').select('*').eq('tournamentId', tournamentId);
       if (!players) return;
 
       const topPlayers: any[] = [];
       groupNames.forEach(gn => {
         const gp = players.filter(p => p.group === gn).sort((a, b) => b.points - a.points || b.gd - a.gd);
-        // Take Top 2
-        topPlayers.push(...gp.slice(0, 2));
+        topPlayers.push(...gp.slice(0, qualsPerGroup));
       });
 
       qualifiedPlayerIds = topPlayers.map(p => p.id);
 
-      if (qualifiedPlayerIds.length === 8) nextStage = "Quarter Final";
-      else if (qualifiedPlayerIds.length === 4) nextStage = "Semi Final";
-      else if (qualifiedPlayerIds.length === 2) nextStage = "Grand Final";
-      else return; // Unsupported auto-advance count
-    } else if (latestStage === "Quarter Final") {
-      qualifiedPlayerIds = stageMatches.map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
+      if (targetQuals === 8) nextStage = "Quarter Final";
+      else if (targetQuals === 4) nextStage = "Semi Final";
+      else if (targetQuals === 2) nextStage = "Grand Final";
+      else return; 
+    } else if (lowerStage === "round 1" || lowerStage === "round of 16") {
+      qualifiedPlayerIds = stageMatches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
+      nextStage = "Quarter Final";
+    } else if (lowerStage === "quarter final") {
+      qualifiedPlayerIds = stageMatches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
       nextStage = "Semi Final";
-    } else if (latestStage === "Semi Final") {
-      qualifiedPlayerIds = stageMatches.map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
+    } else if (lowerStage === "semi final") {
+      qualifiedPlayerIds = stageMatches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(m => m.homeScore > m.awayScore ? m.homePlayerId : m.awayPlayerId);
       nextStage = "Grand Final";
     }
 
@@ -309,22 +318,28 @@ export default function AdminDashboard() {
     const nextStageExists = allMatches.some(m => m.round === nextStage);
     if (nextStageExists) return;
 
-    // 5. Generate and randomize next stage matches
+    // 5. Generate next stage matches (DETERMINISTIC BRACKET)
+    // We maintain winner order from previous stage index to ensure correct brackets
     const { data: playersInfo } = await supabase.from('players').select('id, name').in('id', qualifiedPlayerIds);
     if (!playersInfo) return;
 
-    const randomized = [...playersInfo].sort(() => Math.random() - 0.5);
+    // Map info for quick access
+    const playerMap = new Map(playersInfo.map(p => [p.id, p]));
+    const orderedQualified = qualifiedPlayerIds.map(id => playerMap.get(id)).filter(Boolean);
+
     const newMatches = [];
     let matchIdx = allMatches.length + 1;
 
-    for (let i = 0; i < randomized.length; i += 2) {
-      if (randomized[i + 1]) {
+    for (let i = 0; i < orderedQualified.length; i += 2) {
+      const p1 = orderedQualified[i];
+      const p2 = orderedQualified[i + 1];
+      if (p1 && p2) {
         newMatches.push({
           tournamentId,
-          homePlayerId: randomized[i].id,
-          homePlayerName: randomized[i].name,
-          awayPlayerId: randomized[i + 1].id,
-          awayPlayerName: randomized[i + 1].name,
+          homePlayerId: p1.id,
+          homePlayerName: p1.name,
+          awayPlayerId: p2.id,
+          awayPlayerName: p2.name,
           status: 'pending',
           round: nextStage,
           matchIndex: matchIdx++
@@ -487,14 +502,34 @@ Match Rules for finals:
 Match duration: 15 minutes + Extra Time + penalty`);
     else if (format === "round_robin") setWizardRules("Round Robin: Everyone plays everyone. Winner determined by points.");
     else setWizardRules("Hybrid: Group stages followed by Knockout for the top performers.");
+    
+    // For knockout, we can skip directly to draw or summary
+    if (format === "knockout") {
+      setFixtureWizardStep(2); // Setup (Bye check)
+    } else {
+      setFixtureWizardStep(2); // Setup (Group count)
+    }
+  };
+
+  const calculateQualifiersPerGroup = (gCount: number, tQuals: number) => {
+    if (gCount === 0) return 0;
+    return Math.ceil(tQuals / gCount);
   };
 
   const finalizeWizardStep2 = () => {
+    if (selectedFormat === 'hybrid') {
+      setFixtureWizardStep(2.5); // New step for Target Qualifiers
+    } else {
+      finalizeToStep3();
+    }
+  };
+
+  const finalizeToStep3 = () => {
     const verifiedPlayers = players.filter(p => p.status === 'approved');
 
     // Logic for Step 3: Manual Draw Engine Pre-filling
     const groups: { [key: string]: any[] } = {};
-    const count = selectedFormat === "hybrid" ? wizardGroupCount : 1;
+    const count = (selectedFormat === "hybrid" || selectedFormat === "round_robin") ? wizardGroupCount : 1;
 
     for (let i = 0; i < count; i++) {
       const key = i >= 26 ? String.fromCharCode(65 + Math.floor(i / 26) - 1) + String.fromCharCode(65 + (i % 26)) : String.fromCharCode(65 + i);
@@ -898,6 +933,75 @@ Match duration: 15 minutes + Extra Time + penalty`);
           </div>
 
           <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.02] backdrop-blur-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                  <RefreshCw className="w-4 h-4 text-orange-500" />
+                </div>
+                <h3 className="text-[11px] font-extrabold text-white/40 uppercase tracking-wider">Qualification Logic</h3>
+              </div>
+              {selectedTournament && (!selectedTournament.format || !selectedTournament.target_qualifiers) && (
+                <button
+                  onClick={async () => {
+                    if (!selectedTournament) return;
+                    const updates = {
+                      format: "knockout",
+                      target_qualifiers: approvedPlayers.length > 8 ? 16 : 8,
+                      qualifiers_per_group: 2
+                    };
+                    const { error } = await supabase.from('tournaments').update(updates).eq('id', selectedTournament.id);
+                    if (!error) {
+                      setSelectedTournament({ ...selectedTournament, ...updates });
+                      alert("Tournament metadata initialized!");
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-orange-500/20 text-orange-500 border border-orange-500/20 text-[9px] font-black uppercase rounded-lg hover:bg-orange-500/30 transition-all hover:scale-105 active:scale-95"
+                >
+                  Repair Metadata
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Tournament Format</label>
+                <select
+                  value={selectedTournament?.format || "knockout"}
+                  onChange={(e) => updateSettings("format", e.target.value)}
+                  className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none"
+                >
+                  <option value="knockout">Single Elimination</option>
+                  <option value="round_robin">Round Robin</option>
+                  <option value="hybrid">Hybrid Group Stage</option>
+                </select>
+              </div>
+
+              {selectedTournament?.format === 'hybrid' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Target Total Qualifiers</label>
+                    <input
+                      type="number"
+                      value={selectedTournament?.target_qualifiers || 4}
+                      onChange={(e) => updateSettings("target_qualifiers", parseInt(e.target.value))}
+                      className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Qualifiers Per Group</label>
+                    <input
+                      type="number"
+                      value={selectedTournament?.qualifiers_per_group || 2}
+                      onChange={(e) => updateSettings("qualifiers_per_group", parseInt(e.target.value))}
+                      className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.02] backdrop-blur-xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center">
                 <Edit3 className="w-4 h-4 text-secondary" />
@@ -1055,6 +1159,59 @@ Match duration: 15 minutes + Extra Time + penalty`);
                         Back
                       </button>
                       <button onClick={finalizeWizardStep2} className="flex-[2] px-8 py-4 bg-primary text-background-dark font-black uppercase text-xs tracking-widest rounded-2xl hover:brightness-110 transition-all shadow-[0_10px_25px_rgba(15,164,175,0.2)]">
+                        Continue to {selectedFormat === 'hybrid' ? 'Qualification Setup' : 'Draw Engine'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {fixtureWizardStep === 2.5 && (
+                  <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
+                    <div className="text-center space-y-2">
+                      <h4 className="text-3xl font-black italic uppercase tracking-tighter text-white">Qualification Setup</h4>
+                      <p className="text-white/40 text-sm">Choose how many players should lead to the next round.</p>
+                    </div>
+
+                    <div className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 space-y-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-2 block">Target Qualifiers for Knockout</label>
+                        <div className="grid grid-cols-3 gap-4">
+                          {[2, 4, 8].map(num => (
+                            <button
+                              key={num}
+                              onClick={() => {
+                                setTargetQualifiers(num);
+                                setQualifiersPerGroup(calculateQualifiersPerGroup(wizardGroupCount, num));
+                              }}
+                              className={`p-6 rounded-2xl border transition-all ${targetQualifiers === num ? 'bg-primary border-primary text-background-dark' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'}`}
+                            >
+                              <div className="text-2xl font-black italic">{num}</div>
+                              <div className="text-[9px] font-black uppercase tracking-widest mt-1">{num === 2 ? 'Final' : num === 4 ? 'Semi-Finals' : 'Quarter-Finals'}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10 space-y-3">
+                        <div className="flex items-center gap-3 text-primary">
+                          <Check className="w-5 h-5" />
+                          <h6 className="font-bold uppercase text-xs tracking-wider">Automated Logic</h6>
+                        </div>
+                        <p className="text-sm text-white/60">
+                          Based on <span className="text-white font-bold">{wizardGroupCount}</span> groups and <span className="text-white font-bold">{targetQualifiers}</span> total qualifiers:
+                          <br />
+                          <span className="text-primary font-black italic mt-2 block tracking-wider">
+                            🚀 Top {qualifiersPerGroup} from each group will lead to the next round.
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button onClick={() => setFixtureWizardStep(2)} className="flex-1 px-8 py-4 bg-white/5 text-white font-black uppercase text-xs tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                        Back
+                      </button>
+                      <button onClick={finalizeToStep3} className="flex-[2] px-8 py-4 bg-primary text-background-dark font-black uppercase text-xs tracking-widest rounded-2xl hover:brightness-110 transition-all shadow-[0_10px_25px_rgba(15,164,175,0.2)]">
                         Continue to Draw Engine
                       </button>
                     </div>
@@ -1150,6 +1307,13 @@ Match duration: 15 minutes + Extra Time + penalty`);
                             generated.forEach(m => m.matchIndex = matchIdx++);
                           } else if (selectedFormat === 'knockout') {
                             const pList = [...(groupAssignments['A'] as any[])].sort(() => Math.random() - 0.5);
+                            
+                            // Determine starting round name based on player count
+                            let roundName = "Round 1";
+                            if (pList.length <= 4) roundName = "Semi Final";
+                            else if (pList.length <= 8) roundName = "Quarter Final";
+                            else if (pList.length <= 16) roundName = "Round 1";
+
                             for (let i = 0; i < pList.length; i += 2) {
                               if (pList[i + 1]) {
                                 generated.push({
@@ -1159,8 +1323,8 @@ Match duration: 15 minutes + Extra Time + penalty`);
                                   "awayPlayerId": pList[i + 1].id,
                                   "awayPlayerName": pList[i + 1].name,
                                   status: "pending",
-                                  round: "Round 1",
-                                  stage: "Round 1",
+                                  round: roundName,
+                                  stage: roundName,
                                   "matchIndex": matchIdx++
                                 });
                               } else {
@@ -1173,8 +1337,8 @@ Match duration: 15 minutes + Extra Time + penalty`);
                                   status: "completed",
                                   "homeScore": 3,
                                   "awayScore": 0,
-                                  round: "Round 1",
-                                  stage: "Round 1",
+                                  round: roundName,
+                                  stage: roundName,
                                   "matchIndex": matchIdx++
                                 });
                               }
@@ -1380,6 +1544,9 @@ Match duration: 15 minutes + Extra Time + penalty`);
                           await updateSettings("activeStage", selectedFormat === 'knockout' ? 'knockout' : 'groups');
                           await updateSettings("rules", wizardRules);
                           await updateSettings("groupCount", wizardGroupCount);
+                          await updateSettings("format", selectedFormat);
+                          await updateSettings("target_qualifiers", targetQualifiers);
+                          await updateSettings("qualifiers_per_group", qualifiersPerGroup);
 
                           setIsGeneratingFixtures(false);
                           alert("Tournament Launched Successfully!");
@@ -1486,7 +1653,19 @@ Match duration: 15 minutes + Extra Time + penalty`);
                   </div>
                   <div>
                     <h3 className="text-base md:text-xl font-black text-white italic tracking-tighter uppercase mb-0.5">Match Center</h3>
-                    <p className="text-[10px] md:text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{matches.length} matches total</p>
+                    <p className="text-[10px] md:text-[11px] text-white/30 font-extrabold uppercase tracking-wider">
+                      {(() => {
+                        const latestRound = Array.from(new Set(matches.map(m => m.round))).filter(Boolean).pop();
+                        if (!latestRound) return `${matches.length} matches total`;
+                        const roundMatches = matches.filter(m => m.round === latestRound);
+                        const completedCount = roundMatches.filter(m => m.status === 'completed').length;
+                        return (
+                          <>
+                            <span className="text-primary">{latestRound}</span>: {completedCount}/{roundMatches.length} Completed
+                          </>
+                        );
+                      })()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
@@ -1496,6 +1675,15 @@ Match duration: 15 minutes + Extra Time + penalty`);
                       className="w-full md:w-auto px-5 py-2.5 bg-secondary text-white text-[10px] md:text-[11px] font-extrabold rounded-xl uppercase tracking-wider hover:brightness-110 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-secondary/10"
                     >
                       <RefreshCw className="w-3.5 h-3.5" /> Generate Fixtures
+                    </button>
+                  )}
+                  {matches.length > 0 && (
+                    <button
+                      onClick={() => selectedTournament && autoAdvanceStage(selectedTournament.id)}
+                      className="w-full md:w-auto px-5 py-2.5 bg-white/5 text-white/50 border border-white/10 text-[10px] md:text-[11px] font-extrabold rounded-xl uppercase tracking-wider hover:bg-white/10 flex items-center justify-center gap-2 transition-all active:scale-95"
+                      title="Manually trigger next stage seeding"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> Reseed Stage
                     </button>
                   )}
                   {overrideMode && (

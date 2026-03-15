@@ -225,7 +225,7 @@ export default function TournamentDetails() {
 
           {activeTab === "bracket" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-x-auto pb-12 scrollbar-hide">
-              <BracketView matches={matches} />
+              <BracketView matches={matches} tournament={activeTournament} playerCount={players.length} />
             </section>
           )}
 
@@ -460,141 +460,222 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
   );
 }
 
-function BracketView({ matches }: { matches: any[] }) {
-  // Always ensure at least 4 QF slots if none exist
+function BracketView({ matches, tournament, playerCount }: { matches: any[], tournament: any, playerCount: number }) {
+  // 1. Dynamic Detection of Rounds
+  // If target_qualifiers is set, use it. Otherwise guess based on player count or existing matches.
+  const targetQuals = tournament?.target_qualifiers || (playerCount > 8 ? 16 : 8);
+  
+  const r16MatchesRaw = matches.filter(m => m.round === "Round 1" || m.round === "Round of 16").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  const hasR16Matches = r16MatchesRaw.length > 0;
+  
+  // Show R16 if explicitly set to 16, or if player count > 8 and it's single elim
+  const showR16 = targetQuals === 16 || hasR16Matches;
+
   const rawQfMatches = matches.filter(m => m.round === "Quarter Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
-  const qfMatches = rawQfMatches.length > 0 ? rawQfMatches : [
-    { id: 'p-qf-1', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-    { id: 'p-qf-2', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-    { id: 'p-qf-3', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-    { id: 'p-qf-4', round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-  ];
-
-  // Always ensure at least 2 SF slots
   const rawSfMatches = matches.filter(m => m.round === "Semi Final").sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
-  const sfMatches = rawSfMatches.length > 0 ? rawSfMatches : [
-    { id: 'p-sf-1', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-    { id: 'p-sf-2', round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' },
-  ];
 
-  const finalMatch = matches.find(m => m.round === "Grand Final");
+  const finalMatchRaw = matches.find(m => m.round === "Grand Final");
 
-  // ─── Layout constants (px, must match CSS used in MatchNode below) ─────────
-  // title ~18px + flex-1 card with 2 rows (py-3≈12px + text≈22px each) = 18+2*46 = 110px... use 128
-  const CH = 128;   // fixed card height in px
-  const QG = 48;    // QF gap: gap-12 = 3rem = 48px
-  const CW = 52;    // connector SVG width
+  // 1.5 Helper to get Winner Name for a slot if the match is completed
+  const getWinnerForMatchIndex = (roundMatches: any[], index: number) => {
+    const match = roundMatches.find(m => (m.matchIndex ?? roundMatches.indexOf(m)) === index);
+    if (!match || match.status !== 'completed') return null;
+    return match.homeScore > match.awayScore ? match.homePlayerName : match.awayPlayerName;
+  };
+
+  // 2. Map QF Slots (potentially showing winners from R16)
+  const qfMatches = Array.from({ length: 4 }, (_, i) => {
+    const existing = rawQfMatches.find(m => (m.matchIndex ?? rawQfMatches.indexOf(m)) === i);
+    if (existing) return existing;
+    
+    // Live advancement from R16 if R16 matches exist
+    let home = 'TBD';
+    let away = 'TBD';
+    if (showR16) {
+      home = getWinnerForMatchIndex(r16MatchesRaw, i * 2) || 'TBD';
+      away = getWinnerForMatchIndex(r16MatchesRaw, i * 2 + 1) || 'TBD';
+    }
+    return { id: `p-qf-${i}`, round: 'Quarter Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: i };
+  });
+
+  // 3. Map SF Slots (potentially showing winners from QF)
+  const sfMatches = Array.from({ length: 2 }, (_, i) => {
+    const existing = rawSfMatches.find(m => (m.matchIndex ?? rawSfMatches.indexOf(m)) === i);
+    if (existing) return existing;
+    
+    // Live advancement from QF
+    const home = getWinnerForMatchIndex(qfMatches, i * 2) || 'TBD';
+    const away = getWinnerForMatchIndex(qfMatches, i * 2 + 1) || 'TBD';
+    return { id: `p-sf-${i}`, round: 'Semi Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: i };
+  });
+
+  // 4. Map Grand Final
+  const finalMatch = finalMatchRaw || (() => {
+    const home = getWinnerForMatchIndex(sfMatches, 0) || 'TBD';
+    const away = getWinnerForMatchIndex(sfMatches, 1) || 'TBD';
+    return { id: 'p-final', round: 'Grand Final', homePlayerName: home, awayPlayerName: away, status: 'pending' };
+  })();
+
+  // ─── Layout constants ─────────
+  const CH = 130;   // card height
+  const QG = 32;    // gap
+  const CW = 56;    // svg width
   const cx = CW / 2;
+  const LINE = 'rgba(15, 164, 175, 0.2)';
 
-  // Y centre of each QF card within the full column
-  const qf1 = CH / 2;                    // 64
-  const qf2 = qf1 + CH + QG;             // 240
-  const qf3 = qf2 + CH + QG;             // 416
-  const qf4 = qf3 + CH + QG;             // 592
-  // SF targets = midpoint of each QF pair
-  const sf1 = (qf1 + qf2) / 2;          // 152
-  const sf2 = (qf3 + qf4) / 2;          // 504
-  const totalH = 4 * CH + 3 * QG;       // 656 — full column height
-  const finalY  = (sf1 + sf2) / 2;      // 328 — where Final card centre lands
-  const sfTop = sf1 - CH / 2;           // 88  — push SF column down
-  const sfGap = sf2 - sf1 - CH;         // 224 — gap between SF items
-  const LINE = 'rgba(255,255,255,0.18)';
+  // Y Positions
+  const r16Ys = Array.from({ length: 8 }, (_, i) => CH / 2 + i * (CH + QG));
+  const qfYs = showR16 
+    ? Array.from({ length: 4 }, (_, i) => (r16Ys[i*2] + r16Ys[i*2 + 1]) / 2)
+    : Array.from({ length: 4 }, (_, i) => CH / 2 + i * (CH + QG));
+  
+  const sfYs = [(qfYs[0] + qfYs[1]) / 2, (qfYs[2] + qfYs[3]) / 2];
+  const finalY = (sfYs[0] + sfYs[1]) / 2;
+  const totalH = showR16 ? 8 * CH + 7 * QG : 4 * CH + 3 * QG;
 
-  const MatchNode = ({ match, title }: { match: any, title: string }) => (
-    <div className="flex flex-col gap-2 min-w-[260px] group/match" style={{ height: CH }}>
-      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] italic px-2 group-hover/match:text-white transition-colors leading-tight">
-        {title}
-      </span>
-      <div className="relative p-[1px] rounded-2xl bg-gradient-to-r from-primary/40 via-primary/5 to-transparent group-hover/match:from-primary/60 transition-all duration-500 flex-1">
-        <div className="bg-background-dark/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-white/5 h-full flex flex-col justify-around">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-white/5 hover:bg-white/[0.03] transition-all gap-4">
-            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate transition-all ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
-              {match.homePlayerName}
-            </span>
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.homeScore > match.awayScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
-              {match.status === 'completed' ? (match.homeScore ?? 0) : '—'}
+  const MatchNode = ({ match, title }: { match: any, title: string }) => {
+    const isHomeWinner = match.status === 'completed' && match.homeScore > match.awayScore;
+    const isAwayWinner = match.status === 'completed' && match.awayScore > match.homeScore;
+
+    return (
+      <div className="flex flex-col gap-2 min-w-[240px] group/match" style={{ height: CH }}>
+        <div className="flex items-center justify-between px-2">
+          <span className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] group-hover/match:text-primary/70 transition-colors">
+            {title}
+          </span>
+          {match.status === 'completed' && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+              <span className="text-[9px] font-black text-secondary uppercase tracking-[0.1em] italic">Final</span>
             </div>
-          </div>
-          <div className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.03] transition-all gap-4">
-            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate transition-all ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
-              {match.awayPlayerName}
-            </span>
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.awayScore > match.homeScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
-              {match.status === 'completed' ? (match.awayScore ?? 0) : '—'}
+          )}
+        </div>
+        
+        <div className="relative p-[1px] rounded-2xl bg-white/5 border border-white/5 group-hover/match:border-primary/20 transition-all flex-1 shadow-2xl">
+          <div className="bg-background-dark/60 backdrop-blur-md rounded-2xl overflow-hidden h-full flex flex-col divide-y divide-white/[0.03]">
+            {/* Home Player Row */}
+            <div className={`flex-1 flex items-center justify-between px-5 relative transition-all duration-500 ${isHomeWinner ? 'bg-primary/20' : ''}`}>
+              {isHomeWinner && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(15,164,175,1)]" />}
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-black italic uppercase tracking-tighter transition-all duration-500 ${isHomeWinner ? 'text-white scale-105' : (match.homePlayerName === 'TBD' ? 'text-white/10' : 'text-white/30')}`}>
+                  {match.homePlayerName}
+                </span>
+                {isHomeWinner && <Trophy className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_8px_rgba(15,164,175,0.6)] animate-bounce" />}
+              </div>
+              <div className={`flex flex-col items-end ${isHomeWinner ? 'scale-110' : ''} transition-transform`}>
+                <span className={`text-base font-black ${isHomeWinner ? 'text-primary' : 'text-white/20'}`}>
+                  {match.status === 'completed' ? (match.homeScore ?? 0) : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Away Player Row */}
+            <div className={`flex-1 flex items-center justify-between px-5 relative transition-all duration-500 ${isAwayWinner ? 'bg-primary/20' : ''}`}>
+              {isAwayWinner && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(15,164,175,1)]" />}
+              <div className="flex items-center gap-3">
+                <span className={`text-sm font-black italic uppercase tracking-tighter transition-all duration-500 ${isAwayWinner ? 'text-white scale-105' : (match.awayPlayerName === 'TBD' ? 'text-white/10' : 'text-white/30')}`}>
+                  {match.awayPlayerName}
+                </span>
+                {isAwayWinner && <Trophy className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_8px_rgba(15,164,175,0.6)] animate-bounce" />}
+              </div>
+              <div className={`flex flex-col items-end ${isAwayWinner ? 'scale-110' : ''} transition-transform`}>
+                <span className={`text-base font-black ${isAwayWinner ? 'text-primary' : 'text-white/20'}`}>
+                  {match.status === 'completed' ? (match.awayScore ?? 0) : ''}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="flex items-start py-8 pb-12 overflow-x-auto">
+    <div className="flex items-start p-8 min-w-max">
+      {/* ── Round of 16 ── */}
+      {showR16 && (
+        <>
+          <div className="flex flex-col shrink-0" style={{ gap: QG }}>
+            {Array.from({ length: 8 }).map((_, i) => {
+              const m = r16MatchesRaw[i] || { id: `p-r16-${i}`, round: 'Round 1', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' };
+              return <div key={m.id}><MatchNode match={m} title={`Round of 16 — #${i + 1}`} /></div>
+            })}
+          </div>
+          <svg width={CW} height={totalH} className="shrink-0">
+            {r16Ys.map((y, i) => i % 2 === 0 && (
+              <path key={i} stroke={LINE} strokeWidth="2" fill="none" d={`M 0 ${y} H ${cx} V ${r16Ys[i+1]} M 0 ${r16Ys[i+1]} H ${cx} M ${cx} ${qfYs[i/2]} H ${CW}`} />
+            ))}
+          </svg>
+        </>
+      )}
+
       {/* ── Quarter Finals ── */}
-      <div className="flex flex-col shrink-0" style={{ gap: QG }}>
+      <div className="flex flex-col shrink-0" style={{ marginTop: showR16 ? qfYs[0] - CH/2 : 0, gap: showR16 ? qfYs[1] - qfYs[0] - CH : QG }}>
         {qfMatches.map((m, i) => (
           <div key={m.id}><MatchNode match={m} title={`Quarter-Final ${i + 1}`} /></div>
         ))}
       </div>
 
-      {/* ── QF → SF connector SVG ── */}
-      <svg width={CW} height={totalH} className="shrink-0" style={{ overflow: 'visible' }}>
-        <path stroke={LINE} strokeWidth="1.5" fill="none" d={[
-          `M 0 ${qf1} H ${cx} V ${qf2}`, `M 0 ${qf2} H ${cx}`, `M ${cx} ${sf1} H ${CW}`,
-          `M 0 ${qf3} H ${cx} V ${qf4}`, `M 0 ${qf4} H ${cx}`, `M ${cx} ${sf2} H ${CW}`,
-        ].join(' ')} />
+      {/* ── QF → SF connector ── */}
+      <svg width={CW} height={totalH} className="shrink-0">
+        {qfYs.map((y, i) => i % 2 === 0 && (
+          <path key={i} stroke={LINE} strokeWidth="2" fill="none" d={`M 0 ${y} H ${cx} V ${qfYs[i+1]} M 0 ${qfYs[i+1]} H ${cx} M ${cx} ${sfYs[i/2]} H ${CW}`} />
+        ))}
       </svg>
 
-      {/* ── Semi Finals — offset so cards land exactly at sf1/sf2 ── */}
-      <div className="flex flex-col shrink-0" style={{ marginTop: sfTop, gap: sfGap }}>
+      {/* ── Semi Finals ── */}
+      <div className="flex flex-col shrink-0" style={{ marginTop: sfYs[0] - CH/2, gap: sfYs[1] - sfYs[0] - CH }}>
         {sfMatches.map((m, i) => (
           <div key={m.id}><MatchNode match={m} title={`Semi-Final ${i + 1}`} /></div>
         ))}
       </div>
 
-      {/* ── SF → Final connector SVG ── */}
+      {/* ── SF → Final connector ── */}
       <svg width={CW} height={totalH} className="shrink-0">
-        <path stroke={LINE} strokeWidth="1.5" fill="none" d={[
-          `M 0 ${sf1} H ${cx} V ${sf2}`, `M 0 ${sf2} H ${cx}`, `M ${cx} ${finalY} H ${CW}`,
-        ].join(' ')} />
+        <path stroke={LINE} strokeWidth="2" fill="none" d={`M 0 ${sfYs[0]} H ${cx} V ${sfYs[1]} M 0 ${sfYs[1]} H ${cx} M ${cx} ${finalY} H ${CW}`} />
       </svg>
 
-      {/* ── Grand Final — flex-centred so its middle aligns with finalY ── */}
-      <div className="shrink-0 flex items-center" style={{ height: totalH }}>
-        <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_50px_rgba(15,164,175,0.2)] w-[320px]">
-          <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-8 flex flex-col items-center gap-5 text-center border border-white/5">
+      {/* ── Grand Final ── */}
+      <div className="flex items-center" style={{ height: totalH }}>
+        <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_60px_rgba(15,164,175,0.3)] w-[320px]">
+          <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-8 flex flex-col items-center gap-6 text-center border border-white/5">
             <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30">
-                <Trophy className="w-10 h-10 text-primary" />
+              <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full animate-pulse" />
+              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30 shadow-inner">
+                <Trophy className="w-10 h-10 text-primary shadow-glow" />
               </div>
             </div>
+            
             <div className="space-y-1">
               <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
               <p className="text-[10px] text-white/30 uppercase font-black tracking-[0.4em]">The Ultimate Showdown</p>
             </div>
-            <div className="flex flex-col gap-3 w-full">
-              <div className="text-xl font-black italic uppercase tracking-tighter text-white truncate px-4">
-                {finalMatch ? finalMatch.homePlayerName : "TBD"}
-              </div>
-              <div className="flex items-center gap-4 px-4">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/30" />
-                <span className="text-primary font-black italic text-lg tracking-widest">VS</span>
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-primary/30" />
-              </div>
-              <div className="text-xl font-black italic uppercase tracking-tighter text-white truncate px-4">
-                {finalMatch ? finalMatch.awayPlayerName : "TBD"}
-              </div>
+
+            <div className="flex flex-col gap-4 w-full">
+               <div className={`p-4 rounded-2xl transition-all ${finalMatch.status === 'completed' && finalMatch.homeScore > finalMatch.awayScore ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/20 scale-105' : 'bg-white/[0.02] border border-white/5 opacity-50'}`}>
+                 <span className={`text-lg font-black italic uppercase tracking-tighter block truncate ${finalMatch.status === 'completed' && finalMatch.homeScore > finalMatch.awayScore ? 'text-white' : 'text-white/40'}`}>
+                   {finalMatch.homePlayerName}
+                 </span>
+               </div>
+               
+               <div className="flex items-center gap-4 px-4 overflow-hidden">
+                 <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-primary/40" />
+                 <span className="text-primary font-black italic text-xl tracking-widest drop-shadow-[0_0_8px_rgba(15,164,175,0.5)]">VS</span>
+                 <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-primary/40" />
+               </div>
+
+               <div className={`p-4 rounded-2xl transition-all ${finalMatch.status === 'completed' && finalMatch.awayScore > finalMatch.homeScore ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/20 scale-105' : 'bg-white/[0.02] border border-white/5 opacity-50'}`}>
+                 <span className={`text-lg font-black italic uppercase tracking-tighter block truncate ${finalMatch.status === 'completed' && finalMatch.awayScore > finalMatch.homeScore ? 'text-white' : 'text-white/40'}`}>
+                   {finalMatch.awayPlayerName}
+                 </span>
+               </div>
             </div>
-            <div className="w-full px-4 py-3 bg-white/5 rounded-2xl border border-white/5">
-              <span className="text-xs font-black text-white/40 uppercase tracking-[0.2em]">
-                {finalMatch?.status === 'completed' ? (
-                  <span className="flex items-center justify-center gap-3">
-                    Result: <span className="text-primary">{finalMatch.homeScore} – {finalMatch.awayScore}</span>
-                  </span>
-                ) : "Match Pending"}
-              </span>
-            </div>
+
+            {finalMatch.status === 'completed' && (
+              <div className="w-full px-6 py-4 bg-primary text-background-dark rounded-2xl font-black text-xl italic tracking-tighter shadow-[0_10px_30px_rgba(15,164,175,0.5)]">
+                {finalMatch.homeScore} - {finalMatch.awayScore}
+              </div>
+            )}
           </div>
         </div>
       </div>
