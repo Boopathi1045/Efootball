@@ -162,11 +162,10 @@ export default function Registration() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-background-light text-sm font-semibold ml-1">WhatsApp Number</label>
+                <label className="text-background-light text-sm font-semibold ml-1">WhatsApp Number (Optional)</label>
                 <div className="relative">
                   <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-5 h-5" />
                   <input 
-                    required
                     value={formData.phone}
                     onChange={e => setFormData({...formData, phone: e.target.value})}
                     className="w-full pl-12 pr-4 h-14 bg-primary/5 border border-primary/20 rounded-xl text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
@@ -177,11 +176,10 @@ export default function Registration() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-background-light text-sm font-semibold ml-1">eFootball Unique ID</label>
+                <label className="text-background-light text-sm font-semibold ml-1">eFootball Unique ID (Optional)</label>
                 <div className="relative">
                   <Gamepad2 className="absolute left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-5 h-5" />
                   <input 
-                    required
                     value={formData.efootballId}
                     onChange={e => setFormData({...formData, efootballId: e.target.value})}
                     className="w-full pl-12 pr-4 h-14 bg-primary/5 border border-primary/20 rounded-xl text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
