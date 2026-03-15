@@ -624,13 +624,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
                       >
                         {t.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
-                      <button
-                        onClick={(e) => deleteTournament(e, t.id)}
-                        className="w-12 h-12 flex items-center justify-center bg-secondary/10 border border-secondary/20 text-secondary rounded-2xl hover:bg-secondary/20 transition-all duration-300 hover:scale-105"
-                        title="Delete Tournament"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+
                     </div>
                   </div>
 
