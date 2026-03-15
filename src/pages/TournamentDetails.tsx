@@ -98,7 +98,7 @@ export default function TournamentDetails() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="flex items-center justify-between border-b border-primary/20 px-6 md:px-20 py-4 glass-panel sticky top-0 z-50">
+      <header className="flex items-center justify-between border-b border-primary/20 px-4 md:px-20 py-4 glass-panel sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <Link to="/" className="p-2 hover:bg-primary/10 rounded-full transition-colors text-background-light/70 hover:text-white">
             <ChevronLeft className="w-6 h-6" />
@@ -113,9 +113,9 @@ export default function TournamentDetails() {
         </div>
       </header>
 
-      <main className="flex-1 px-6 md:px-20 py-8 max-w-[1400px] mx-auto w-full space-y-8">
+      <main className="flex-1 px-4 md:px-20 py-6 md:py-8 max-w-[1400px] mx-auto w-full space-y-6 md:space-y-8">
         <div className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black leading-tight text-white">{activeTournament?.name || "Loading..."}</h1>
+          <h1 className="text-2xl md:text-4xl font-black leading-tight text-white">{activeTournament?.name || "Loading..."}</h1>
           <p className="text-primary/70 text-lg font-medium">Pro League | Phase: {activeStage.toUpperCase()}</p>
         </div>
 
@@ -394,24 +394,28 @@ function BracketView({ matches }: { matches: any[] }) {
   const finalMatch = matches.find(m => m.round === "Grand Final");
 
   const MatchNode = ({ match, title }: { match: any, title: string }) => (
-    <div className="flex flex-col gap-2 min-w-[220px]">
-      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 italic px-2">{title}</span>
-      <div className="bg-white/[0.03] border-l-4 border-primary rounded-r-2xl border border-y-white/5 border-r-white/5 overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 hover:bg-white/[0.02] transition-colors gap-4">
-          <span className={`text-sm font-bold truncate ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
-            {match.homePlayerName}
-          </span>
-          <span className={`w-8 h-8 rounded flex items-center justify-center text-xs font-black shrink-0 ${match.status === 'completed' && match.homeScore > match.awayScore ? 'bg-primary text-background-dark' : 'bg-white/5 text-white/20'}`}>
-            {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
-          </span>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-4">
-          <span className={`text-sm font-bold truncate ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
-            {match.awayPlayerName}
-          </span>
-          <span className={`w-8 h-8 rounded flex items-center justify-center text-xs font-black shrink-0 ${match.status === 'completed' && match.awayScore > match.homeScore ? 'bg-primary text-background-dark' : 'bg-white/5 text-white/20'}`}>
-            {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
-          </span>
+    <div className="flex flex-col gap-3 min-w-[260px] group/match">
+      <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-0.5 italic px-2 group-hover/match:text-white transition-colors">
+        {title}
+      </span>
+      <div className="relative p-[1px] rounded-2xl bg-gradient-to-r from-primary/40 via-primary/5 to-transparent transition-all duration-500 group-hover/match:from-primary/60">
+        <div className="bg-background-dark/80 backdrop-blur-xl rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-white/5">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 hover:bg-white/[0.03] transition-all gap-4">
+            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white scale-105 origin-left' : 'text-white/40'} transition-all`}>
+              {match.homePlayerName}
+            </span>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.homeScore > match.awayScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
+              {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4 hover:bg-white/[0.03] transition-all gap-4">
+            <span className={`text-sm font-bold italic uppercase tracking-tighter truncate ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white scale-105 origin-left' : 'text-white/40'} transition-all`}>
+              {match.awayPlayerName}
+            </span>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 transition-all ${match.status === 'completed' && match.awayScore > match.homeScore ? 'bg-primary text-background-dark shadow-[0_0_20px_rgba(15,164,175,0.4)]' : 'bg-white/5 text-white/20'}`}>
+              {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -453,31 +457,47 @@ function BracketView({ matches }: { matches: any[] }) {
 
       {/* Grand Final Card */}
       <div className="ml-8">
-        <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_50px_rgba(15,164,175,0.2)]">
-          <div className="bg-background-dark rounded-[2.4rem] p-10 flex flex-col items-center gap-6 min-w-[320px] text-center">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 neon-glow">
-              <Trophy className="w-10 h-10 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
-              <p className="text-[10px] text-white/30 uppercase font-bold tracking-[0.3em]">The Ultimate Showdown</p>
+        <div className="relative p-[1px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_50px_rgba(15,164,175,0.2)] w-full max-w-[360px] mx-auto">
+          <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-8 md:p-12 flex flex-col items-center gap-6 md:gap-8 text-center border border-white/5">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+              <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30 shadow-[0_0_30px_rgba(15,164,175,0.2)]">
+                <Trophy className="w-12 h-12 text-primary" />
+              </div>
             </div>
             
-            <div className="flex flex-col gap-4 w-full py-6">
-              <div className="text-3xl font-black italic uppercase tracking-tighter text-white/90 truncate max-w-full">
-                {finalMatch ? finalMatch.homePlayerName : "TBD"} 
-                <span className="text-primary mx-4 text-xl">VS</span>
-                {finalMatch ? finalMatch.awayPlayerName : "TBD"}
+            <div className="space-y-2">
+              <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
+              <p className="text-[11px] text-white/30 uppercase font-black tracking-[0.4em]">The Ultimate Showdown</p>
+            </div>
+            
+            <div className="flex flex-col gap-6 w-full py-4 relative">
+              <div className="flex flex-col gap-1">
+                <div className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white truncate px-4">
+                  {finalMatch ? finalMatch.homePlayerName : "TBD"}
+                </div>
+                <div className="flex items-center justify-center gap-4 py-2">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/30" />
+                  <span className="text-primary font-black italic text-xl tracking-widest px-2">VS</span>
+                  <div className="h-px flex-1 bg-gradient-to-l from-transparent to-primary/30" />
+                </div>
+                <div className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-white truncate px-4">
+                  {finalMatch ? finalMatch.awayPlayerName : "TBD"}
+                </div>
               </div>
-              <div className="text-xs font-bold text-white/20 uppercase tracking-[0.2em]">
-                {finalMatch?.status === 'completed' ? `Result: ${finalMatch.homeScore} - ${finalMatch.awayScore}` : "Match Pending"}
+              
+              <div className="mt-4 px-6 py-3 bg-white/5 rounded-2xl border border-white/5 backdrop-blur-md">
+                <span className="text-xs font-black text-white/40 uppercase tracking-[0.2em]">
+                  {finalMatch?.status === 'completed' ? (
+                    <span className="flex items-center justify-center gap-3">
+                      Result: <span className="text-primary text-lg">{finalMatch.homeScore} - {finalMatch.awayScore}</span>
+                    </span>
+                  ) : "Match Pending"}
+                </span>
               </div>
             </div>
 
-            <button className="group relative px-12 py-4 bg-primary text-background-dark font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-xl overflow-hidden min-w-[200px]">
-              <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 rotate-12" />
-              Watch Live
-            </button>
+
           </div>
         </div>
       </div>

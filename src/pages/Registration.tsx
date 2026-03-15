@@ -107,7 +107,7 @@ export default function Registration() {
         </h2>
       </header>
 
-      <div className="flex flex-col gap-3 p-4 mt-2 max-w-2xl mx-auto w-full">
+      <div className="flex flex-col gap-3 p-4 mt-2 max-w-2xl mx-auto w-full md:mt-6">
         <div className="flex gap-6 justify-between items-center">
           <p className="text-primary text-sm font-bold uppercase tracking-widest">Registration Status</p>
           <p className="text-white text-sm font-medium">Step 1 of 1</p>
@@ -117,8 +117,8 @@ export default function Registration() {
         </div>
 
         <div className="pt-6 pb-2">
-          <h3 className="text-white tracking-tight text-3xl font-extrabold leading-tight">{activeTournament.name}</h3>
-          <p className="text-background-light/80 text-base font-normal mt-2">Claim your glory. Complete the registration to secure your bracket position.</p>
+          <h3 className="text-white tracking-tight text-2xl md:text-3xl font-extrabold leading-tight">{activeTournament.name}</h3>
+          <p className="text-background-light/80 text-sm md:text-base font-normal mt-2">Claim your glory. Complete the registration to secure your bracket position.</p>
         </div>
 
         {activeTournament.activeStage === 'registration' ? (

@@ -156,9 +156,9 @@ export default function Draw() {
           <Trophy className="text-primary w-8 h-8" />
           <h2 className="text-xl font-bold tracking-tight">eFootball <span className="text-primary uppercase italic">{activeTournament?.name || "Pro Draw"}</span></h2>
         </div>
-        <div className="flex items-center gap-4">
-          <Link to={`/admin/${encodeURIComponent(activeTournament?.name || '')}`} className="text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors">Admin Dashboard</Link>
-          <Link to="/" className="text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors">Public Hub</Link>
+        <div className="flex items-center gap-3 md:gap-4">
+          <Link to={`/admin/${encodeURIComponent(activeTournament?.name || '')}`} className="text-[10px] md:text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors uppercase">Admin</Link>
+          <Link to="/" className="text-[10px] md:text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors uppercase">Hub</Link>
         </div>
       </header>
 
@@ -166,7 +166,7 @@ export default function Draw() {
         {/* Dynamic Groups */}
         <div 
           className="grid gap-6 w-full" 
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignContent: 'start' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', alignContent: 'start' }}
         >
           {groupKeys.map(key => {
             const groupPlayers = players.filter(p => p.group === key);
@@ -214,7 +214,7 @@ export default function Draw() {
         </div>
 
         {/* Center Stage */}
-        <section className="flex-[2] flex flex-col items-center justify-center min-h-[500px] relative">
+        <section className="flex-[2] flex flex-col items-center justify-center min-h-[400px] md:min-h-[500px] relative py-8 md:py-0">
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-[400px] h-[400px] bg-primary/20 rounded-full blur-[120px]"></div>
           </div>
@@ -226,8 +226,8 @@ export default function Draw() {
                   <Settings className="w-10 h-10 text-primary animate-spin-slow" />
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-4xl font-black italic uppercase italic tracking-tighter text-white">Live Draw Setup</h3>
-                  <p className="text-white/40 text-sm leading-relaxed uppercase tracking-widest font-bold">Configure the number of groups for <span className="text-primary">{activeTournament?.name}</span></p>
+                  <h3 className="text-2xl md:text-4xl font-black italic uppercase italic tracking-tighter text-white">Live Draw Setup</h3>
+                  <p className="text-white/40 text-[10px] md:text-sm leading-relaxed uppercase tracking-widest font-bold">Configure groups for <span className="text-primary">{activeTournament?.name}</span></p>
                 </div>
                 
                 <div className="flex flex-col gap-6 pt-4 max-w-xs mx-auto">
@@ -242,7 +242,7 @@ export default function Draw() {
                       max="32"
                       value={setupGroupCount}
                       onChange={e => setSetupGroupCount(parseInt(e.target.value) || 1)}
-                      className="w-full bg-background-dark/50 border border-primary/30 rounded-full px-12 py-4 text-center text-5xl font-black italic text-white placeholder-white/20 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-inner"
+                      className="w-full bg-background-dark/50 border border-primary/30 rounded-full px-12 py-3 md:py-4 text-center text-3xl md:text-5xl font-black italic text-white placeholder-white/20 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-inner"
                     />
                     <button 
                       onClick={() => setSetupGroupCount(setupGroupCount + 1)}
@@ -272,14 +272,14 @@ export default function Draw() {
                onClick={() => !drawing && unassignedPlayers.length > 0 && drawNext()}
             >
               <div className="absolute inset-0 bg-primary/40 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
-              <motion.div 
+                <motion.div 
                 animate={{ rotate: drawing ? 360 : 0, scale: drawing ? 0.95 : 1 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.9 }}
                 transition={{ duration: 0.5, ease: "easeInOut", rotate: { duration: 2, repeat: drawing ? Infinity : 0 } }}
-                className="relative w-64 h-64 rounded-full border-4 border-primary/30 bg-background-dark flex items-center justify-center shadow-[0_0_80px_rgba(0,242,255,0.3)] overflow-hidden"
+                className="relative w-48 h-48 md:w-64 md:h-64 rounded-full border-4 border-primary/30 bg-background-dark flex items-center justify-center shadow-[0_0_80px_rgba(0,242,255,0.3)] overflow-hidden"
               >
-                <Trophy className={`w-24 h-24 ${drawing ? 'text-primary animate-pulse' : 'text-primary/80'} drop-shadow-[0_0_15px_rgba(0,242,255,0.8)]`} />
+                <Trophy className={`w-16 h-16 md:w-24 md:h-24 ${drawing ? 'text-primary animate-pulse' : 'text-primary/80'} drop-shadow-[0_0_15px_rgba(0,242,255,0.8)]`} />
                 <div className="absolute inset-0 border-8 border-primary/5 rounded-full border-t-primary/40 border-b-primary/40 animate-spin" style={{ animationDuration: '4s' }}></div>
                 <div className="absolute inset-4 border-4 border-primary/10 rounded-full border-l-primary/30 border-r-primary/30 animate-spin" style={{ animationDuration: '3s', animationDirection: 'reverse' }}></div>
               </motion.div>
