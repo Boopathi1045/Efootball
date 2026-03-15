@@ -1501,7 +1501,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
               )}
               <div className="p-6 space-y-4 flex-1 overflow-y-auto scrollbar-hide">
                 {matches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(match => (
-                  <div key={match.id} className="p-5 flex flex-col gap-3 bg-background-dark/50 border border-white/5 rounded-3xl hover:border-primary/20 transition-all group relative">
+                  <div key={match.id} className="p-4 bg-background-dark/50 border border-white/5 rounded-2xl hover:border-primary/20 transition-all group relative">
                     {overrideMode && (
                       <button
                         onClick={() => deleteMatch(match.id)}
@@ -1522,68 +1522,80 @@ Match duration: 15 minutes + Extra Time + penalty`);
                         <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">#{match.matchIndex}</span>
                       </div>
                     )}
-                    <button
-                      onClick={() => toggleMatchStatus(match.id, match.status)}
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black uppercase shadow-lg transition-all hover:scale-110 active:scale-95 border-2 border-background-dark ${match.status === 'completed'
-                          ? 'bg-secondary text-white'
-                          : 'bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary/30'
-                        }`}
-                    >
-                      {match.status === 'completed' ? 'FT' : 'TBD'}
-                    </button>
-                    <div className="flex items-center justify-between gap-6 pl-4">
-                      <div className="flex-1 flex flex-col text-right">
-                        {overrideMode ? (
-                          <select
-                            value={match.homePlayerId || ''}
-                            onChange={(e) => {
-                              const targetId = e.target.value;
-                              const targetName = players.find(p => p.id === targetId)?.name || "TBD";
-                              updateMatchDetails(match.id, { homePlayerId: targetId, homePlayerName: targetName });
-                            }}
-                            className="bg-background-dark border border-white/5 rounded-xl px-2 py-1.5 text-xs text-white font-bold outline-none text-right"
-                          >
-                            <option value="">Select Home</option>
-                            {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                          </select>
-                        ) : (
-                          <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.homePlayerName}</span>
-                        )}
-                        {!overrideMode && <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{match.stage || "Home"}</span>}
+                    <div className="flex items-center justify-between gap-4">
+                      {/* Left: Home Player */}
+                      <div className="flex-1 flex items-center justify-end gap-3 min-w-0">
+                        <div className="flex flex-col items-end min-w-0">
+                          {overrideMode ? (
+                            <select
+                              value={match.homePlayerId || ''}
+                              onChange={(e) => {
+                                const targetId = e.target.value;
+                                const targetName = players.find(p => p.id === targetId)?.name || "TBD";
+                                updateMatchDetails(match.id, { homePlayerId: targetId, homePlayerName: targetName });
+                              }}
+                              className="bg-background-dark border border-white/5 rounded-xl px-2 py-1 text-[10px] text-white font-bold outline-none text-right w-full max-w-[120px]"
+                            >
+                              <option value="">Select Home</option>
+                              {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.homePlayerName}</span>
+                          )}
+                          {!overrideMode && <span className="text-[9px] text-white/30 font-black uppercase tracking-wider">{match.stage || "Home"}</span>}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="number"
-                          defaultValue={match.homeScore}
-                          onBlur={(e) => updateMatchScore(match.id, parseInt(e.target.value) || 0, match.awayScore)}
-                          className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl text-center text-primary font-black text-lg focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-white/20 font-black text-xl italic">:</span>
-                        <input
-                          type="number"
-                          defaultValue={match.awayScore}
-                          onBlur={(e) => updateMatchScore(match.id, match.homeScore, parseInt(e.target.value) || 0)}
-                          className="w-12 h-12 bg-white/5 border border-white/10 rounded-2xl text-center text-primary font-black text-lg focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
+
+                      {/* Center: Score & Status */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center bg-white/[0.03] border border-white/10 rounded-xl px-2 py-1 gap-2">
+                          <input
+                            type="number"
+                            defaultValue={match.homeScore}
+                            onBlur={(e) => updateMatchScore(match.id, parseInt(e.target.value) || 0, match.awayScore)}
+                            className="w-10 h-10 bg-transparent text-center text-primary font-black text-lg focus:text-white outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <span className="text-white/20 font-black text-lg italic">:</span>
+                          <input
+                            type="number"
+                            defaultValue={match.awayScore}
+                            onBlur={(e) => updateMatchScore(match.id, match.homeScore, parseInt(e.target.value) || 0)}
+                            className="w-10 h-10 bg-transparent text-center text-primary font-black text-lg focus:text-white outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                        
+                        <button
+                          onClick={() => toggleMatchStatus(match.id, match.status)}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black uppercase shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/10 ${match.status === 'completed'
+                              ? 'bg-secondary text-white border-secondary/20'
+                              : 'bg-white/5 text-white/30 hover:bg-white/10'
+                            }`}
+                        >
+                          {match.status === 'completed' ? 'FT' : 'TBD'}
+                        </button>
                       </div>
-                      <div className="flex-1 flex flex-col text-left">
-                        {overrideMode ? (
-                          <select
-                            value={match.awayPlayerId || ''}
-                            onChange={(e) => {
-                              const targetId = e.target.value;
-                              const targetName = players.find(p => p.id === targetId)?.name || "TBD";
-                              updateMatchDetails(match.id, { awayPlayerId: targetId, awayPlayerName: targetName });
-                            }}
-                            className="bg-background-dark border border-white/5 rounded-xl px-2 py-1.5 text-xs text-white font-bold outline-none"
-                          >
-                            <option value="">Select Away</option>
-                            {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                          </select>
-                        ) : (
-                          <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.awayPlayerName}</span>
-                        )}
-                        {!overrideMode && <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{match.group ? `Grp ${match.group}` : 'Away'}</span>}
+
+                      {/* Right: Away Player */}
+                      <div className="flex-1 flex items-center justify-start gap-3 min-w-0">
+                        <div className="flex flex-col items-start min-w-0">
+                          {overrideMode ? (
+                            <select
+                              value={match.awayPlayerId || ''}
+                              onChange={(e) => {
+                                const targetId = e.target.value;
+                                const targetName = players.find(p => p.id === targetId)?.name || "TBD";
+                                updateMatchDetails(match.id, { awayPlayerId: targetId, awayPlayerName: targetName });
+                              }}
+                              className="bg-background-dark border border-white/5 rounded-xl px-2 py-1 text-[10px] text-white font-bold outline-none w-full max-w-[120px]"
+                            >
+                              <option value="">Select Away</option>
+                              {approvedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{match.awayPlayerName}</span>
+                          )}
+                          {!overrideMode && <span className="text-[9px] text-white/30 font-black uppercase tracking-wider">{match.group ? `Grp ${match.group}` : 'Away'}</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1633,7 +1645,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
                   <tbody className="divide-y divide-white/5">
                     {approvedPlayers.map(player => (
                       <tr key={player.id} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-8 py-6">
+                        <td className="px-8 py-3">
                           {overrideMode ? (
                             <input
                               type="text"

@@ -335,6 +335,7 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
               <th className="px-3 py-4 text-center">W</th>
               <th className="px-3 py-4 text-center">D</th>
               <th className="px-3 py-4 text-center">L</th>
+              <th className="px-3 py-4 text-center">GD</th>
               <th className="px-3 py-4 text-center">Pts</th>
               <th className="px-6 py-4 text-center">Form</th>
             </tr>
@@ -357,6 +358,7 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
                 <td className="px-3 py-5 text-center text-white/60">{p.wins || 0}</td>
                 <td className="px-3 py-5 text-center text-white/40">{p.draws || 0}</td>
                 <td className="px-3 py-5 text-center text-white/40">{p.losses || 0}</td>
+                <td className="px-3 py-5 text-center font-bold text-white/40">{p.gd || 0}</td>
                 <td className="px-3 py-5 text-center font-black text-primary text-base tracking-tighter italic">{p.points || 0}</td>
                 <td className="px-6 py-5">
                   <div className="flex items-center justify-center gap-1">
