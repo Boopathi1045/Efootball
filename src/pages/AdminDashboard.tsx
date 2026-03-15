@@ -185,6 +185,12 @@ export default function AdminDashboard() {
     if (error) {
       console.error("Update match score error:", error);
       alert("Failed to update match score: " + error.message);
+    } else {
+      // If match is already completed, recalculate standings
+      const match = matches.find(m => m.id === id);
+      if (match?.status === 'completed' && selectedTournament) {
+        await recalculateStandings(selectedTournament.id);
+      }
     }
   };
 
@@ -341,10 +347,12 @@ export default function AdminDashboard() {
     if (error) {
       console.error("Toggle match status error:", error);
       alert("Failed to toggle match status: " + error.message);
-    } else if (newStatus === 'completed' && selectedTournament) {
-      // Trigger automation
+    } else if (selectedTournament) {
+      // Always recalculate standings when status changes (either to completed or away from it)
       await recalculateStandings(selectedTournament.id);
-      await autoAdvanceStage(selectedTournament.id);
+      if (newStatus === 'completed') {
+        await autoAdvanceStage(selectedTournament.id);
+      }
     }
   };
 
@@ -626,7 +634,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <div className="flex flex-col gap-2">
                       <label className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] ml-1">Current Phase</label>
                       <div className="relative">
@@ -639,7 +647,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
                             const { error } = await supabase.from('tournaments').update({ activeStage: newStage }).eq('id', t.id);
                             if (error) alert("Failed to change stage: " + error.message);
                           }}
-                          className="w-full bg-background-dark/80 backdrop-blur-md border border-white/5 rounded-2xl px-5 py-3.5 text-xs font-black uppercase tracking-widest text-white outline-none focus:border-primary/40 appearance-none cursor-pointer hover:bg-background-dark transition-colors"
+                          className="w-full bg-background-dark/80 backdrop-blur-md border border-white/5 rounded-2xl px-5 h-[52px] text-xs font-black uppercase tracking-widest text-white outline-none focus:border-primary/40 appearance-none cursor-pointer hover:bg-background-dark transition-colors"
                         >
                           <option value="registration">Registration</option>
                           <option value="draw">Draw</option>
@@ -1435,7 +1443,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
             </div>
           </section>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
             {/* Match Center */}
             <section className="glass-panel rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
               <div className="p-5 md:p-7 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between bg-white/[0.02] gap-4">
@@ -1491,7 +1499,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
                   <button type="submit" className="h-[46px] bg-primary text-background-dark font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/10">Add Match</button>
                 </form>
               )}
-              <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-[300px] scrollbar-hide">
+              <div className="p-6 space-y-4 flex-1 overflow-y-auto scrollbar-hide">
                 {matches.sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(match => (
                   <div key={match.id} className="p-5 flex flex-col gap-3 bg-background-dark/50 border border-white/5 rounded-3xl hover:border-primary/20 transition-all group relative">
                     {overrideMode && (
@@ -1619,8 +1627,6 @@ Match duration: 15 minutes + Extra Time + penalty`);
                     <tr>
                       <th className="px-8 py-5 font-black">Player Name</th>
                       <th className="px-8 py-5 font-black text-center">Group</th>
-                      <th className="px-8 py-5 font-black text-center">Points</th>
-                      <th className="px-8 py-5 font-black text-center">GD</th>
                       <th className="px-8 py-5 font-black text-right">Remove</th>
                     </tr>
                   </thead>
@@ -1642,24 +1648,6 @@ Match duration: 15 minutes + Extra Time + penalty`);
                         <td className="px-8 py-6 text-center">
                           <span className="px-3 py-1 bg-white/5 rounded-lg text-xs font-extrabold text-white/40 group-hover:text-primary group-hover:bg-primary/10 transition-all uppercase tracking-wider">{player.group || "N/A"}</span>
                         </td>
-                        <td className="px-8 py-6 text-center">
-                          <input
-                            type="number"
-                            defaultValue={player.points}
-                            onBlur={(e) => updatePlayerStats(player.id, "points", parseInt(e.target.value) || 0)}
-                            disabled={!overrideMode}
-                            className={`w-14 h-10 bg-transparent rounded-xl text-center text-sm font-black text-white transition-all ${overrideMode ? 'bg-white/5 border border-white/20 focus:border-primary cursor-text text-secondary' : 'border-0 cursor-default opacity-50'}`}
-                          />
-                        </td>
-                        <td className="px-8 py-6 text-center">
-                          <input
-                            type="number"
-                            defaultValue={player.gd}
-                            onBlur={(e) => updatePlayerStats(player.id, "gd", parseInt(e.target.value) || 0)}
-                            disabled={!overrideMode}
-                            className={`w-14 h-10 bg-transparent rounded-xl text-center text-sm font-black text-white transition-all ${overrideMode ? 'bg-white/5 border border-white/20 focus:border-primary cursor-text text-secondary' : 'border-0 cursor-default opacity-50'}`}
-                          />
-                        </td>
                         <td className="px-8 py-6 text-right">
                           <button
                             onClick={() => deletePlayer(player.id)}
@@ -1672,7 +1660,7 @@ Match duration: 15 minutes + Extra Time + penalty`);
                       </tr>
                     ))}
                     {approvedPlayers.length === 0 && (
-                      <tr><td colSpan={5} className="px-8 py-16 text-center text-white/20 italic text-sm">Roster is empty.</td></tr>
+                      <tr><td colSpan={3} className="px-8 py-16 text-center text-white/20 italic text-sm">Roster is empty.</td></tr>
                     )}
                   </tbody>
                 </table>

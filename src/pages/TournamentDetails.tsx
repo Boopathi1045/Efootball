@@ -197,7 +197,7 @@ export default function TournamentDetails() {
             </section>
           )}
 
-          {activeTab === "standings" && (
+           {activeTab === "standings" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               {activeStage === "registration" || activeStage === "draw" ? (
                 <div className="glass-panel p-12 rounded-xl text-center text-background-light/70 flex flex-col items-center gap-4 border border-primary/20">
@@ -205,19 +205,32 @@ export default function TournamentDetails() {
                   <p>Standings will be available once the group stage begins.</p>
                 </div>
               ) : (
-                <div 
-                  className="grid gap-8"
-                  style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}
-                >
-                  {groups.map((grp: string) => (
-                    <GroupTable key={grp} name={`GROUP ${grp}`} players={groupedPlayers[grp]} matches={matches} />
-                  ))}
-                  {groups.length === 0 && (
-                    <div className="col-span-full glass-panel p-12 rounded-xl text-center text-background-light/70 flex flex-col items-center gap-4 border border-primary/20">
-                      <LayoutGrid className="w-12 h-12 text-primary/30" />
-                      <p>No groups assigned yet.</p>
-                    </div>
-                  )}
+                <div className="space-y-8">
+                  <div 
+                    className="grid gap-8"
+                    style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}
+                  >
+                    {groups.length > 0 ? (
+                      groups.map((grp: string) => (
+                        <GroupTable 
+                          key={grp} 
+                          name={`GROUP ${grp}`} 
+                          players={groupedPlayers[grp]} 
+                          matches={matches} 
+                          groupName={grp}
+                        />
+                      ))
+                    ) : (
+                      <div className="col-span-full">
+                        <GroupTable 
+                          name="Tournament Leaderboard" 
+                          players={players.sort((a, b) => b.points - a.points || b.gd - a.gd)} 
+                          matches={matches} 
+                          groupName="None"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </section>
@@ -283,7 +296,7 @@ export default function TournamentDetails() {
   );
 }
 
-function GroupTable({ name, players, matches }: { key?: string | number, name: string, players: any[], matches?: any[] }) {
+function GroupTable({ name, players, matches, groupName }: { key?: string | number, name: string, players: any[], matches: any[], groupName: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const displayPlayers = isExpanded ? players : players.slice(0, 5);
 
@@ -311,48 +324,47 @@ function GroupTable({ name, players, matches }: { key?: string | number, name: s
         </div>
         <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">{players.length} Players</span>
       </div>
-      <div className="overflow-x-auto">
+
+      <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left text-sm border-collapse">
           <thead className="bg-white/5">
             <tr className="text-white/40 uppercase text-[10px] font-black tracking-[0.15em]">
-              <th className="px-6 py-4 w-16 text-center">#</th>
+              <th className="px-6 py-4 w-12 text-center">#</th>
               <th className="px-6 py-4">Player</th>
-              <th className="px-4 py-4 text-center">MP</th>
-              <th className="px-4 py-4 text-center">W</th>
-              <th className="px-4 py-4 text-center">D</th>
-              <th className="px-4 py-4 text-center">L</th>
-              <th className="px-4 py-4 text-center">GD</th>
-              <th className="px-6 py-4 text-center font-black text-primary">Pts</th>
+              <th className="px-3 py-4 text-center">MP</th>
+              <th className="px-3 py-4 text-center">W</th>
+              <th className="px-3 py-4 text-center">D</th>
+              <th className="px-3 py-4 text-center">L</th>
+              <th className="px-3 py-4 text-center">Pts</th>
               <th className="px-6 py-4 text-center">Form</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.03]">
             {displayPlayers.map((p, i) => (
               <tr key={p.id} className="group hover:bg-white/[0.02] transition-all duration-300">
-                <td className="px-6 py-6 text-center">
+                <td className="px-6 py-5 text-center">
                   <span className="text-xs font-black text-white/30 group-hover:text-primary transition-colors">{i + 1}</span>
                 </td>
-                <td className="px-6 py-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[11px] font-black text-white/60 uppercase shadow-inner group-hover:border-primary/40 group-hover:scale-110 transition-all duration-300">
+                <td className="px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[10px] font-black text-white/60 uppercase shadow-inner group-hover:border-primary/40 transition-all duration-300">
                       {p.name.substring(0,2)}
                     </div>
-                    <span className="font-black text-white italic tracking-tighter text-base group-hover:text-primary transition-colors">{p.name}</span>
+                    <span className="font-black text-white italic tracking-tighter text-sm group-hover:text-primary transition-colors truncate max-w-[120px]">{p.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-6 text-center font-bold text-white/40 group-hover:text-white/60">{p.played || 0}</td>
-                <td className="px-4 py-6 text-center text-white/60">{p.wins || 0}</td>
-                <td className="px-4 py-6 text-center text-white/40">{p.draws || 0}</td>
-                <td className="px-4 py-6 text-center text-white/40">{p.losses || 0}</td>
-                <td className="px-4 py-6 text-center text-white/60 font-mono text-xs">{p.gd > 0 ? `+${p.gd}` : p.gd}</td>
-                <td className="px-6 py-6 text-center font-black text-primary text-xl tracking-tighter italic">{p.points || 0}</td>
-                <td className="px-6 py-6 border-l border-white/[0.02]">
-                  <div className="flex items-center justify-center gap-1.5 min-w-[120px]">
+                <td className="px-3 py-5 text-center font-bold text-white/40">{p.played || 0}</td>
+                <td className="px-3 py-5 text-center text-white/60">{p.wins || 0}</td>
+                <td className="px-3 py-5 text-center text-white/40">{p.draws || 0}</td>
+                <td className="px-3 py-5 text-center text-white/40">{p.losses || 0}</td>
+                <td className="px-3 py-5 text-center font-black text-primary text-base tracking-tighter italic">{p.points || 0}</td>
+                <td className="px-6 py-5">
+                  <div className="flex items-center justify-center gap-1">
                     {getPlayerForm(p.id).map((result, idx) => (
                       <div key={idx} className="relative group/form">
-                         {result === 'W' && <CheckCircle2 className="w-5 h-5 text-emerald-500 fill-emerald-500/10 transition-transform group-hover/form:scale-125" />}
-                         {result === 'L' && <XCircle className="w-5 h-5 text-red-500 fill-red-500/10 transition-transform group-hover/form:scale-125" />}
-                         {result === 'D' && <MinusCircle className="w-5 h-5 text-slate-500 fill-slate-500/10 transition-transform group-hover/form:scale-125" />}
+                        {result === 'W' && <CheckCircle2 className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />}
+                        {result === 'L' && <XCircle className="w-4 h-4 text-red-500 fill-red-500/20" />}
+                        {result === 'D' && <MinusCircle className="w-4 h-4 text-slate-500 fill-slate-500/20" />}
                       </div>
                     ))}
                     {getPlayerForm(p.id).length === 0 && <span className="text-white/10 text-[10px] font-black uppercase tracking-[0.2em]">-</span>}
@@ -360,14 +372,10 @@ function GroupTable({ name, players, matches }: { key?: string | number, name: s
                 </td>
               </tr>
             ))}
-            {players.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-6 py-10 text-center text-white/20 font-black uppercase tracking-widest italic">No players assigned yet.</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
+
       {players.length > 5 && (
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
