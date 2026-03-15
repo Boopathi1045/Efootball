@@ -167,22 +167,27 @@ export default function TournamentDetails() {
 
           {activeTab === "players" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden">
+              <div className="bg-primary/5 border border-primary/10 rounded-xl overflow-hidden max-w-3xl">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                  <table className="w-full text-left text-sm table-fixed">
+                    <colgroup>
+                      <col style={{ width: "40%" }} />
+                      <col style={{ width: "35%" }} />
+                      <col style={{ width: "25%" }} />
+                    </colgroup>
                     <thead className="bg-primary/5 text-background-light/70 uppercase text-xs font-bold">
                       <tr>
-                        <th className="px-6 py-4">Player Name</th>
-                        <th className="px-6 py-4">WhatsApp Number</th>
-                        <th className="px-6 py-4 text-right">eFootball ID</th>
+                        <th className="px-6 py-3">Player Name</th>
+                        <th className="px-6 py-3">WhatsApp Number</th>
+                        <th className="px-6 py-3">eFootball ID</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
                       {players.map((p) => (
                         <tr key={p.id} className="hover:bg-primary/5">
-                          <td className="px-6 py-4 font-bold text-white">{p.name}</td>
-                          <td className="px-6 py-4 text-background-light/80 text-sm">{p.phone || "N/A"}</td>
-                          <td className="px-6 py-4 text-right text-background-light/50 font-mono text-xs">{p.efootballId}</td>
+                          <td className="px-6 py-3 font-bold text-white truncate">{p.name}</td>
+                          <td className="px-6 py-3 text-background-light/80 text-sm truncate">{p.phone || "N/A"}</td>
+                          <td className="px-6 py-3 text-background-light/50 font-mono text-xs truncate">{p.efootballId || "—"}</td>
                         </tr>
                       ))}
                       {players.length === 0 && (
