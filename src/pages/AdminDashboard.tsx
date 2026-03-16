@@ -75,9 +75,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!isAdmin) return;
 
-    // Initial fetch of tournaments
     const fetchTournaments = async () => {
-      const { data } = await supabase.from('tournaments').select('*').order('"createdAt"', { ascending: false });
+      const { data } = await supabase
+        .from('tournaments')
+        .select('id, name, isHidden, activeStage, entryFee, isPaid, paymentNumber, rules, target_qualifiers, format, qualifiers_per_group, groupCount')
+        .order('"createdAt"', { ascending: false });
       if (data) {
         setTournaments(data);
         if (urlTourneyId) {
@@ -92,10 +94,12 @@ export default function AdminDashboard() {
     };
     fetchTournaments();
 
-    // Subscribe to tournament changes
     const tourneyChannel = supabase.channel('tournaments_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, async () => {
-        const { data } = await supabase.from('tournaments').select('*').order('"createdAt"', { ascending: false });
+        const { data } = await supabase
+          .from('tournaments')
+          .select('id, name, isHidden, activeStage, entryFee, isPaid, paymentNumber, rules, target_qualifiers, format, qualifiers_per_group, groupCount')
+          .order('"createdAt"', { ascending: false });
         if (data) setTournaments(data);
       }).subscribe();
 
@@ -108,15 +112,20 @@ export default function AdminDashboard() {
     if (!selectedTournament) return;
 
     const fetchScopedData = async () => {
-      const { data: pData } = await supabase.from('players').select('*').eq('"tournamentId"', selectedTournament.id);
+      const { data: pData } = await supabase
+        .from('players')
+        .select('id, name, efootballId, phone, status, group, points, gd, played, wins, draws, losses, seed, tournamentId')
+        .eq('"tournamentId"', selectedTournament.id);
       if (pData) setPlayers(pData);
 
-      const { data: mData } = await supabase.from('matches').select('*').eq('"tournamentId"', selectedTournament.id);
+      const { data: mData } = await supabase
+        .from('matches')
+        .select('id, homePlayerId, awayPlayerId, homePlayerName, awayPlayerName, homeScore, awayScore, status, round, stage, matchIndex, tournamentId')
+        .eq('"tournamentId"', selectedTournament.id);
       if (mData) setMatches(mData);
     };
     fetchScopedData();
 
-    // Setup realtime subscription for the active tournament docs
     const dataChannel = supabase.channel('scoped_data')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `"tournamentId"=eq.${selectedTournament.id}` }, fetchScopedData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `"tournamentId"=eq.${selectedTournament.id}` }, fetchScopedData)
@@ -198,54 +207,10 @@ export default function AdminDashboard() {
   };
 
   const recalculateStandings = async (tournamentId: string) => {
-    // Fetch all players and matches for this tournament
-    const { data: allPlayers } = await supabase.from('players').select('*').eq('tournamentId', tournamentId);
-    const { data: allMatches } = await supabase.from('matches').select('*').eq('tournamentId', tournamentId).eq('status', 'completed');
-
-    if (!allPlayers || !allMatches) return;
-
-    const playerStats = allPlayers.map(player => {
-      const pMatches = allMatches.filter(m => m.homePlayerId === player.id || m.awayPlayerId === player.id);
-
-      let wins = 0, draws = 0, losses = 0, played = 0, gd = 0, points = 0;
-
-      pMatches.forEach(m => {
-        played++;
-        const isHome = m.homePlayerId === player.id;
-        const hScore = m.homeScore || 0;
-        const aScore = m.awayScore || 0;
-
-        if (isHome) {
-          gd += (hScore - aScore);
-          if (hScore > aScore) wins++;
-          else if (hScore < aScore) losses++;
-          else draws++;
-        } else {
-          gd += (aScore - hScore);
-          if (aScore > hScore) wins++;
-          else if (aScore < hScore) losses++;
-          else draws++;
-        }
-      });
-
-      points = (wins * 3) + draws;
-
-      return {
-        id: player.id,
-        played, wins, draws, losses, gd, points
-      };
-    });
-
-    // Batch update players
-    for (const stats of playerStats) {
-      await supabase.from('players').update({
-        played: stats.played,
-        wins: stats.wins,
-        draws: stats.draws,
-        losses: stats.losses,
-        gd: stats.gd,
-        points: stats.points
-      }).eq('id', stats.id);
+    const { error } = await supabase.rpc('recalculate_tournament_standings', { t_id: tournamentId });
+    if (error) {
+      console.error("RPC recalculateStandings error:", error);
+      // Fallback or alert if RPC fails
     }
   };
 

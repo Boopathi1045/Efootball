@@ -42,7 +42,7 @@ export default function Draw() {
 
     // Fetch tournaments
     const fetchTournaments = async () => {
-      let query = supabase.from('tournaments').select('*');
+      let query = supabase.from('tournaments').select('id, name, groupCount, isHidden, createdAt');
       if (urlId) {
         const decodedUrl = decodeURIComponent(urlId);
         query = query.or(`id.eq.${decodedUrl},name.eq.${decodedUrl}`);
@@ -75,7 +75,7 @@ export default function Draw() {
     const fetchPlayers = async () => {
       const { data } = await supabase
         .from('players')
-        .select('*')
+        .select('id, name, efootballId, group, tournamentId, status')
         .eq('"tournamentId"', activeTournament.id)
         .eq('status', 'approved');
       if (data) setPlayers(data);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../supabase";
 import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -54,14 +54,14 @@ export default function TournamentDetails() {
     const fetchData = async () => {
       const { data: pData } = await supabase
         .from('players')
-        .select('*')
+        .select('id, name, phone, efootballId, status, group, points, gd, played, wins, draws, losses')
         .eq('status', 'approved')
         .eq('tournamentId', activeTournament.id);
       if (pData) setPlayers(pData);
 
       const { data: mData } = await supabase
         .from('matches')
-        .select('*')
+        .select('id, homePlayerId, awayPlayerId, homePlayerName, awayPlayerName, homeScore, awayScore, status, round, matchIndex')
         .eq('tournamentId', activeTournament.id);
       if (mData) setMatches(mData);
     };
@@ -82,11 +82,18 @@ export default function TournamentDetails() {
     };
   }, [activeTournament?.id]);
 
-  const groups = Array.from(new Set(players.filter(p => p.group && p.group !== "None").map(p => p.group as string))).sort();
-  const groupedPlayers = groups.reduce((acc: Record<string, any[]>, group: string) => {
-    acc[group] = players.filter(p => p.group === group).sort((a, b) => b.points - a.points || b.gd - a.gd);
-    return acc;
-  }, {});
+  const groups = useMemo(() => 
+    Array.from(new Set(players.filter(p => p.group && p.group !== "None").map(p => p.group as string))).sort(),
+    [players]
+  );
+
+  const groupedPlayers = useMemo(() => 
+    groups.reduce((acc: Record<string, any[]>, group: string) => {
+      acc[group] = players.filter(p => p.group === group).sort((a, b) => b.points - a.points || b.gd - a.gd);
+      return acc;
+    }, {}),
+    [groups, players]
+  );
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Info },

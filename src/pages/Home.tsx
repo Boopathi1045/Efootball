@@ -19,7 +19,7 @@ export default function Home() {
       // Fetch tournaments
       const { data } = await supabase
         .from('tournaments')
-        .select('*')
+        .select('id, name, createdAt, activeStage, isHidden')
         .eq('isHidden', false)
         .order('createdAt', { ascending: false });
       if (data) setTournaments(data);
