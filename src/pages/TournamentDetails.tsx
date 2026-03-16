@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { supabase } from "../supabase";
 import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -54,7 +54,7 @@ export default function TournamentDetails() {
     const fetchData = async () => {
       const { data: pData } = await supabase
         .from('players')
-        .select('id, name, phone, efootballId, status, group, points, gd, played, wins, draws, losses')
+        .select('id, name, phone, efootballId, status, group, points, gd, gf, ga, played, wins, draws, losses')
         .eq('status', 'approved')
         .eq('tournamentId', activeTournament.id);
       if (pData) setPlayers(pData);
@@ -232,7 +232,7 @@ export default function TournamentDetails() {
 
           {activeTab === "bracket" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-x-auto pb-12 scrollbar-hide">
-              <BracketView matches={matches} tournament={activeTournament} playerCount={players.length} />
+              <BracketView matches={matches} tournament={activeTournament} playerCount={players.length} groups={groups} groupedPlayers={groupedPlayers} />
             </section>
           )}
 
@@ -242,23 +242,32 @@ export default function TournamentDetails() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm table-fixed">
                     <colgroup>
-                      <col style={{ width: "40%" }} />
-                      <col style={{ width: "35%" }} />
                       <col style={{ width: "25%" }} />
+                      <col style={{ width: "20%" }} />
+                      <col style={{ width: "25%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
                     </colgroup>
                     <thead className="bg-primary/5 text-background-light/70 uppercase text-xs font-bold">
                       <tr>
                         <th className="px-6 py-3">Player Name</th>
-                        <th className="px-6 py-3">WhatsApp Number</th>
+                        <th className="px-6 py-3">WhatsApp</th>
                         <th className="px-6 py-3">eFootball ID</th>
+                        <th className="px-6 py-3 text-center">GF</th>
+                        <th className="px-6 py-3 text-center">GA</th>
+                        <th className="px-6 py-3 text-center">GD</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
                       {players.map((p) => (
                         <tr key={p.id} className="hover:bg-primary/5">
                           <td className="px-6 py-3 font-bold text-white truncate">{p.name}</td>
-                          <td className="px-6 py-3 text-background-light/80 text-sm truncate">{p.phone || "N/A"}</td>
-                          <td className="px-6 py-3 text-background-light/50 font-mono text-xs truncate">{p.efootballId || "—"}</td>
+                          <td className="px-6 py-3 text-background-light/80 text-xs truncate">{p.phone || "N/A"}</td>
+                          <td className="px-6 py-3 text-background-light/50 font-mono text-[10px] truncate">{p.efootballId || "—"}</td>
+                          <td className="px-6 py-3 text-center font-bold text-primary">{p.gf || 0}</td>
+                          <td className="px-6 py-3 text-center font-bold text-red-400">{p.ga || 0}</td>
+                          <td className="px-6 py-3 text-center font-black italic text-white/40">{p.gd || 0}</td>
                         </tr>
                       ))}
                       {players.length === 0 && (
@@ -334,31 +343,63 @@ export default function TournamentDetails() {
                         {roundName}
                       </h3>
                       <div className="grid gap-3">
-                        {(roundMatches as any[]).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map(match => (
-                          <div key={match.id} className="glass-panel p-4 rounded-xl border border-primary/20 flex flex-col md:flex-row items-center justify-between gap-4 hover:border-primary/40 transition-colors">
-                            <div className="flex items-center gap-2 text-xs font-bold text-primary/70 uppercase w-full md:w-32">
-                              {match.status === 'completed' ? (
-                                <span className="px-2 py-1 bg-secondary border border-secondary text-white rounded">FT</span>
-                              ) : (
-                                <span className="px-2 py-1 bg-primary/10 border border-primary/30 rounded text-primary">TBD</span>
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 flex items-center justify-center gap-4 w-full">
-                              <div className="flex-1 text-right font-bold text-white truncate">{match.homePlayerName}</div>
-                              <div className="px-4 py-2 bg-background-dark rounded-lg border border-primary/10 font-mono font-bold flex items-center gap-2 min-w-[80px] justify-center">
-                                <span className={match.status === 'completed' && match.homeScore > match.awayScore ? "text-secondary text-lg" : "text-background-light text-md"}>
-                                  {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
-                                </span>
-                                <span className="text-background-light/30 text-xs mt-1">VS</span>
-                                <span className={match.status === 'completed' && match.awayScore > match.homeScore ? "text-secondary text-lg" : "text-background-light text-md"}>
-                                  {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
-                                </span>
+                        {(roundMatches as any[]).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0)).map((match, idx) => (
+                            <div key={match.id} className="relative group/match">
+                              {/* Background Glow */}
+                              <div className="absolute inset-0 bg-primary/5 blur-xl group-hover/match:bg-primary/10 transition-all opacity-0 group-hover/match:opacity-100" />
+                              
+                              <div className="relative glass-panel rounded-2xl border border-white/5 group-hover/match:border-primary/20 transition-all p-4 md:p-6 flex flex-col md:flex-row items-center gap-6 overflow-hidden">
+                                {/* Match Info Badge */}
+                                <div className="flex items-center gap-3 w-full md:w-32 shrink-0">
+                                  <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center text-[10px] font-black text-white/20 group-hover/match:text-primary/40 group-hover/match:border-primary/20 transition-colors">
+                                    #{match.matchIndex || idx + 1}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${match.status === 'completed' ? 'text-secondary' : 'text-primary'}`}>
+                                      {match.status === 'completed' ? 'Full Time' : 'Upcoming'}
+                                    </span>
+                                    <span className="text-[10px] text-white/30 font-bold uppercase">{match.round}</span>
+                                  </div>
+                                </div>
+
+                                {/* Match Core */}
+                                <div className="flex-1 flex items-center justify-center gap-4 md:gap-12 w-full">
+                                  {/* Home Player */}
+                                  <div className="flex-1 flex items-center justify-end gap-4 min-w-0">
+                                    <span className={`text-sm md:text-lg font-black italic uppercase tracking-tighter truncate text-right ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
+                                      {match.homePlayerName}
+                                    </span>
+                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 shrink-0">
+                                      {match.homePlayerName.charAt(0)}
+                                    </div>
+                                  </div>
+
+                                  {/* Score Capsule */}
+                                  <div className="shrink-0 flex flex-col items-center gap-1">
+                                    <div className="px-6 py-2 bg-background-dark/80 rounded-2xl border border-white/5 flex items-center gap-4 shadow-2xl group-hover/match:border-primary/30 transition-all">
+                                      <span className={`text-xl font-black italic ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-primary' : 'text-white'}`}>
+                                        {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
+                                      </span>
+                                      <span className="text-white/10 text-xs font-black italic">VS</span>
+                                      <span className={`text-xl font-black italic ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-primary' : 'text-white'}`}>
+                                        {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* Away Player */}
+                                  <div className="flex-1 flex items-center justify-start gap-4 min-w-0">
+                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 shrink-0">
+                                      {match.awayPlayerName.charAt(0)}
+                                    </div>
+                                    <span className={`text-sm md:text-lg font-black italic uppercase tracking-tighter truncate text-left ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
+                                      {match.awayPlayerName}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex-1 text-left font-bold text-white truncate">{match.awayPlayerName}</div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     </div>
                   ))}
@@ -411,6 +452,8 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
               <th className="px-3 py-4 text-center">W</th>
               <th className="px-3 py-4 text-center">D</th>
               <th className="px-3 py-4 text-center">L</th>
+               <th className="px-3 py-4 text-center">GF</th>
+              <th className="px-3 py-4 text-center">GA</th>
               <th className="px-3 py-4 text-center">GD</th>
               <th className="px-3 py-4 text-center">Pts</th>
               <th className="px-6 py-4 text-center">Form</th>
@@ -434,6 +477,8 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
                 <td className="px-3 py-5 text-center text-white/60">{p.wins || 0}</td>
                 <td className="px-3 py-5 text-center text-white/40">{p.draws || 0}</td>
                 <td className="px-3 py-5 text-center text-white/40">{p.losses || 0}</td>
+                 <td className="px-3 py-5 text-center text-white/40">{p.gf || 0}</td>
+                <td className="px-3 py-5 text-center text-white/40">{p.ga || 0}</td>
                 <td className="px-3 py-5 text-center font-bold text-white/40">{p.gd || 0}</td>
                 <td className="px-3 py-5 text-center font-black text-primary text-base tracking-tighter italic">{p.points || 0}</td>
                 <td className="px-6 py-5">
@@ -466,225 +511,340 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
     </div>
   );
 }
+ 
+interface GroupNodeProps {
+  key?: string | number;
+  name: string;
+  players: any[];
+  height: number;
+}
 
-function BracketView({ matches, tournament, playerCount }: { matches: any[], tournament: any, playerCount: number }) {
-  // 1. Dynamic Detection of Rounds
-  const targetQuals = tournament?.target_qualifiers || (playerCount > 8 ? 16 : 8);
-  
-  const r16MatchesRaw = matches.filter(m => m.round === "Round 1" || m.round === "Round of 16" || m.round?.toLowerCase().includes("round of 16")).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
-  const hasR16Matches = r16MatchesRaw.length > 0;
-  const showR16 = targetQuals === 16 || hasR16Matches;
-
-  const rawQfMatches = matches.filter(m => m.round === "Quarter Final" || m.round?.toLowerCase().includes("quarter final")).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
-  const rawSfMatches = matches.filter(m => m.round === "Semi Final" || m.round?.toLowerCase().includes("semi final")).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
-  const rawFinalMatch = matches.find(m => m.round === "Grand Final" || m.round?.toLowerCase().includes("grand final"));
-
-  // 1.5 Helper to get Winner Name for a slot if the match is completed
-  const getWinnerFromMatches = (roundMatches: any[], relativeIdx: number) => {
-    // Use array index (0-based) to find the match in that round
-    const match = roundMatches[relativeIdx];
-    if (!match || match.status !== 'completed') return null;
-    return match.homeScore > match.awayScore ? match.homePlayerName : match.awayPlayerName;
-  };
-
-  // 2. Map QF Slots (potentially showing winners from R16)
-  const qfMatches = Array.from({ length: 4 }, (_, i) => {
-    // Check if we HAVE an actual match for this QF slot in the DB
-    const existing = rawQfMatches[i];
-    if (existing) return existing;
-    
-    // Fallback: Live advancement from R16 mapping
-    let home = 'TBD';
-    let away = 'TBD';
-    if (showR16) {
-      home = getWinnerFromMatches(r16MatchesRaw, i * 2) || 'TBD';
-      away = getWinnerFromMatches(r16MatchesRaw, i * 2 + 1) || 'TBD';
-    }
-    return { id: `p-qf-${i}`, round: 'Quarter Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: i + 1 };
-  });
-
-  // 3. Map SF Slots (potentially showing winners from QF)
-  const sfMatches = Array.from({ length: 2 }, (_, i) => {
-    // Check if we HAVE an actual match for this SF slot in the DB
-    const existing = rawSfMatches[i];
-    if (existing) return existing;
-    
-    // Fallback: Live advancement from QF: SF1=QF1vsQF2, SF2=QF3vsQF4
-    const home = getWinnerFromMatches(rawQfMatches.length > 0 ? rawQfMatches : qfMatches, i * 2) || 'TBD';
-    const away = getWinnerFromMatches(rawQfMatches.length > 0 ? rawQfMatches : qfMatches, i * 2 + 1) || 'TBD';
-    return { id: `p-sf-${i}`, round: 'Semi Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: i + 1 };
-  });
-
-  // 4. Map Grand Final
-  const finalMatch = rawFinalMatch || (() => {
-    const home = getWinnerFromMatches(rawSfMatches.length > 0 ? rawSfMatches : sfMatches, 0) || 'TBD';
-    const away = getWinnerFromMatches(rawSfMatches.length > 0 ? rawSfMatches : sfMatches, 1) || 'TBD';
-    return { id: 'p-final', round: 'Grand Final', homePlayerName: home, awayPlayerName: away, status: 'pending', matchIndex: 1 };
-  })();
-
-  // ─── Layout constants ─────────
-  const CH = 130;   // card height
-  const QG = 32;    // gap
-  const CW = 56;    // svg width
-  const cx = CW / 2;
-  const LINE = 'rgba(15, 164, 175, 0.2)';
-
-  // Y Positions
-  const r16Ys = Array.from({ length: 8 }, (_, i) => CH / 2 + i * (CH + QG));
-  const qfYs = showR16 
-    ? Array.from({ length: 4 }, (_, i) => (r16Ys[i*2] + r16Ys[i*2 + 1]) / 2)
-    : Array.from({ length: 4 }, (_, i) => CH / 2 + i * (CH + QG));
-  
-  const sfYs = [(qfYs[0] + qfYs[1]) / 2, (qfYs[2] + qfYs[3]) / 2];
-  const finalY = (sfYs[0] + sfYs[1]) / 2;
-  const totalH = showR16 ? 8 * CH + 7 * QG : 4 * CH + 3 * QG;
-
-  const MatchNode = ({ match, title }: { match: any, title: string }) => {
-    const isHomeWinner = match.status === 'completed' && match.homeScore > match.awayScore;
-    const isAwayWinner = match.status === 'completed' && match.awayScore > match.homeScore;
-
-    return (
-      <div className="flex flex-col gap-2 min-w-[240px] group/match" style={{ height: CH }}>
-        <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] group-hover/match:text-primary/70 transition-colors">
-            {title}
-          </span>
-          {match.status === 'completed' && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-              <span className="text-[9px] font-black text-secondary uppercase tracking-[0.1em] italic">FT</span>
-            </div>
-          )}
+const GroupNode = ({ name, players, height }: GroupNodeProps) => (
+  <div className="flex flex-col gap-2 min-w-[200px]" style={{ height }}>
+    <span className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] px-2">{name} Standings</span>
+    <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-2xl p-4 flex flex-col justify-center divide-y divide-white/5">
+      {players.slice(0, 2).map((p, i) => (
+        <div key={p.id} className="py-2 flex items-center justify-between">
+          <span className="text-xs font-bold text-white/60 italic truncate max-w-[120px]">{p.name || 'TBD'}</span>
+          <span className="text-[10px] font-black text-primary italic">#{i+1}</span>
         </div>
-        
-        <div className="relative p-[1px] rounded-2xl bg-white/5 border border-white/5 group-hover/match:border-primary/20 transition-all flex-1 shadow-2xl">
-          <div className="bg-background-dark/60 backdrop-blur-md rounded-2xl overflow-hidden h-full flex flex-col divide-y divide-white/[0.03]">
-            {/* Home Player Row */}
-            <div className={`flex-1 flex items-center justify-between px-5 relative transition-all duration-500 ${isHomeWinner ? 'bg-primary/20' : ''}`}>
-              {isHomeWinner && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(15,164,175,1)]" />}
-              <div className="flex items-center gap-3">
-                <span className={`text-sm font-black italic uppercase tracking-tighter transition-all duration-500 ${isHomeWinner ? 'text-white scale-105' : (match.homePlayerName === 'TBD' ? 'text-white/10' : 'text-white/30')}`}>
-                  {match.homePlayerName}
-                </span>
-                {isHomeWinner && <Trophy className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_8px_rgba(15,164,175,0.6)] animate-bounce" />}
-              </div>
-              <div className={`flex flex-col items-end ${isHomeWinner ? 'scale-110' : ''} transition-transform`}>
-                <span className={`text-base font-black ${isHomeWinner ? 'text-primary' : 'text-white/20'}`}>
-                  {match.status === 'completed' ? (match.homeScore ?? 0) : ''}
-                </span>
-              </div>
-            </div>
+      ))}
+      {players.length === 0 && <span className="text-xs text-white/10 italic py-2">Waiting for matches...</span>}
+    </div>
+  </div>
+);
 
-            {/* Away Player Row */}
-            <div className={`flex-1 flex items-center justify-between px-5 relative transition-all duration-500 ${isAwayWinner ? 'bg-primary/20' : ''}`}>
-              {isAwayWinner && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(15,164,175,1)]" />}
-              <div className="flex items-center gap-3">
-                <span className={`text-sm font-black italic uppercase tracking-tighter transition-all duration-500 ${isAwayWinner ? 'text-white scale-105' : (match.awayPlayerName === 'TBD' ? 'text-white/10' : 'text-white/30')}`}>
-                  {match.awayPlayerName}
-                </span>
-                {isAwayWinner && <Trophy className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_8px_rgba(15,164,175,0.6)] animate-bounce" />}
-              </div>
-              <div className={`flex flex-col items-end ${isAwayWinner ? 'scale-110' : ''} transition-transform`}>
-                <span className={`text-base font-black ${isAwayWinner ? 'text-primary' : 'text-white/20'}`}>
-                  {match.status === 'completed' ? (match.awayScore ?? 0) : ''}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+interface MatchNodeProps {
+  key?: string | number;
+  match: any;
+  title: string;
+  height: number;
+}
+
+const MatchNode = ({ match, title, height }: MatchNodeProps) => {
+  const isHomeWinner = match.status === 'completed' && match.homeScore > match.awayScore;
+  const isAwayWinner = match.status === 'completed' && match.awayScore > match.homeScore;
 
   return (
-    <div className="flex items-start p-8 min-w-max">
-      {/* ── Round of 16 ── */}
-      {showR16 && (
-        <>
-          <div className="flex flex-col shrink-0" style={{ gap: QG }}>
-            {Array.from({ length: 8 }).map((_, i) => {
-              const m = r16MatchesRaw[i] || { id: `p-r16-${i}`, round: 'Round 1', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending' };
-              return <div key={m.id}><MatchNode match={m} title={`Round of 16 — #${i + 1}`} /></div>
-            })}
+    <div className="flex flex-col gap-2 min-w-[240px] group/match" style={{ height }}>
+      <div className="flex items-center justify-between px-2">
+        <span className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em] group-hover/match:text-primary/70 transition-colors">
+          {title}
+        </span>
+        {match.status === 'completed' && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+            <span className="text-[9px] font-black text-secondary uppercase tracking-[0.1em] italic">FT</span>
           </div>
-          <svg width={CW} height={totalH} className="shrink-0">
-            {r16Ys.map((y, i) => i % 2 === 0 && (
-              <path key={i} stroke={LINE} strokeWidth="2" fill="none" d={`M 0 ${y} H ${cx} V ${r16Ys[i+1]} M 0 ${r16Ys[i+1]} H ${cx} M ${cx} ${qfYs[i/2]} H ${CW}`} />
-            ))}
-          </svg>
-        </>
-      )}
-
-      {/* ── Quarter Finals ── */}
-      <div className="flex flex-col shrink-0" style={{ marginTop: showR16 ? qfYs[0] - CH/2 : 0, gap: showR16 ? qfYs[1] - qfYs[0] - CH : QG }}>
-        {qfMatches.map((m, i) => (
-          <div key={m.id}><MatchNode match={m} title={`Quarter-Final ${i + 1}`} /></div>
-        ))}
+        )}
       </div>
-
-      {/* ── QF → SF connector ── */}
-      <svg width={CW} height={totalH} className="shrink-0">
-        {qfYs.map((y, i) => i % 2 === 0 && (
-          <path key={i} stroke={LINE} strokeWidth="2" fill="none" d={`M 0 ${y} H ${cx} V ${qfYs[i+1]} M 0 ${qfYs[i+1]} H ${cx} M ${cx} ${sfYs[i/2]} H ${CW}`} />
-        ))}
-      </svg>
-
-      {/* ── Semi Finals ── */}
-      <div className="flex flex-col shrink-0" style={{ marginTop: sfYs[0] - CH/2, gap: sfYs[1] - sfYs[0] - CH }}>
-        {sfMatches.map((m, i) => (
-          <div key={m.id}><MatchNode match={m} title={`Semi-Final ${i + 1}`} /></div>
-        ))}
-      </div>
-
-      {/* ── SF → Final connector ── */}
-      <svg width={CW} height={totalH} className="shrink-0">
-        <path stroke={LINE} strokeWidth="2" fill="none" d={`M 0 ${sfYs[0]} H ${cx} V ${sfYs[1]} M 0 ${sfYs[1]} H ${cx} M ${cx} ${finalY} H ${CW}`} />
-      </svg>
-
-      {/* ── Grand Final ── */}
-      <div className="flex items-center" style={{ height: totalH }}>
-        <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_60px_rgba(15,164,175,0.3)] w-[320px]">
-          <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-8 flex flex-col items-center gap-6 text-center border border-white/5">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full animate-pulse" />
-              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30 shadow-inner">
-                <Trophy className="w-10 h-10 text-primary shadow-glow" />
-              </div>
+      
+      <div className="relative p-[1px] rounded-2xl bg-white/5 border border-white/5 group-hover/match:border-primary/20 transition-all flex-1 shadow-2xl">
+        <div className="bg-background-dark/60 backdrop-blur-md rounded-2xl overflow-hidden h-full flex flex-col divide-y divide-white/[0.03]">
+          <div className={`flex-1 flex items-center justify-between px-5 relative transition-all duration-500 ${isHomeWinner ? 'bg-primary/20' : ''}`}>
+            {isHomeWinner && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(15,164,175,1)]" />}
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-black italic uppercase tracking-tighter transition-all duration-500 ${isHomeWinner ? 'text-white scale-105' : (match.homePlayerName === 'TBD' ? 'text-white/10' : 'text-white/30')}`}>
+                {match.homePlayerName}
+              </span>
+              {isHomeWinner && <Trophy className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_8px_rgba(15,164,175,0.6)] animate-bounce" />}
             </div>
-            
-            <div className="space-y-1">
-              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Grand Final</h3>
-              <p className="text-[10px] text-white/30 uppercase font-black tracking-[0.4em]">The Ultimate Showdown</p>
+            <div className={`flex flex-col items-end ${isHomeWinner ? 'scale-110' : ''} transition-transform`}>
+              <span className={`text-base font-black ${isHomeWinner ? 'text-primary' : 'text-white/20'}`}>
+                {match.status === 'completed' ? (match.homeScore ?? 0) : ''}
+              </span>
             </div>
-
-            <div className="flex flex-col gap-4 w-full">
-               <div className={`p-4 rounded-2xl transition-all ${finalMatch.status === 'completed' && finalMatch.homeScore > finalMatch.awayScore ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/20 scale-105' : 'bg-white/[0.02] border border-white/5 opacity-50'}`}>
-                 <span className={`text-lg font-black italic uppercase tracking-tighter block truncate ${finalMatch.status === 'completed' && finalMatch.homeScore > finalMatch.awayScore ? 'text-white' : 'text-white/40'}`}>
-                   {finalMatch.homePlayerName}
-                 </span>
-               </div>
-               
-               <div className="flex items-center gap-4 px-4 overflow-hidden">
-                 <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-primary/40" />
-                 <span className="text-primary font-black italic text-xl tracking-widest drop-shadow-[0_0_8px_rgba(15,164,175,0.5)]">VS</span>
-                 <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-primary/40" />
-               </div>
-
-               <div className={`p-4 rounded-2xl transition-all ${finalMatch.status === 'completed' && finalMatch.awayScore > finalMatch.homeScore ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/20 scale-105' : 'bg-white/[0.02] border border-white/5 opacity-50'}`}>
-                 <span className={`text-lg font-black italic uppercase tracking-tighter block truncate ${finalMatch.status === 'completed' && finalMatch.awayScore > finalMatch.homeScore ? 'text-white' : 'text-white/40'}`}>
-                   {finalMatch.awayPlayerName}
-                 </span>
-               </div>
+          </div>
+          <div className={`flex-1 flex items-center justify-between px-5 relative transition-all duration-500 ${isAwayWinner ? 'bg-primary/20' : ''}`}>
+            {isAwayWinner && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(15,164,175,1)]" />}
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-black italic uppercase tracking-tighter transition-all duration-500 ${isAwayWinner ? 'text-white scale-105' : (match.awayPlayerName === 'TBD' ? 'text-white/10' : 'text-white/30')}`}>
+                {match.awayPlayerName}
+              </span>
+              {isAwayWinner && <Trophy className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_8px_rgba(15,164,175,0.6)] animate-bounce" />}
             </div>
-
-            {finalMatch.status === 'completed' && (
-              <div className="w-full px-6 py-4 bg-primary text-background-dark rounded-2xl font-black text-xl italic tracking-tighter shadow-[0_10px_30px_rgba(15,164,175,0.5)]">
-                {finalMatch.homeScore} - {finalMatch.awayScore}
-              </div>
-            )}
+            <div className={`flex flex-col items-end ${isAwayWinner ? 'scale-110' : ''} transition-transform`}>
+              <span className={`text-base font-black ${isAwayWinner ? 'text-primary' : 'text-white/20'}`}>
+                {match.status === 'completed' ? (match.awayScore ?? 0) : ''}
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers }: { matches: any[], tournament: any, playerCount: number, groups: string[], groupedPlayers: Record<string, any[]> }) => {
+  const isHybrid = tournament?.format?.toLowerCase() === 'hybrid';
+  const isKnockoutStarted = tournament?.activeStage === 'knockout' || tournament?.activeStage === 'finished';
+
+  // 1. Determine Starting Round (Strictly Knockout)
+  const hybridStartingRound = groups.length <= 2 ? 'SF' : groups.length <= 4 ? 'QF' : 'R16';
+  const targetQuals = tournament?.target_qualifiers || (playerCount > 8 ? 16 : 8);
+  const knockoutStartingRound = targetQuals <= 4 ? 'SF' : targetQuals <= 8 ? 'QF' : 'R16';
+  const startRound = isHybrid && groups.length > 0 ? hybridStartingRound : knockoutStartingRound;
+
+  // 2. Fetch Raw Matches
+  const r16MatchesRaw = matches.filter(m => 
+    m.round === "Round 1" || 
+    m.round === "Round of 16" || 
+    m.round?.toLowerCase().includes("round of 16") ||
+    m.round?.toLowerCase().includes("r16") ||
+    m.round?.toLowerCase() === "knockout" // Match potential fallback names
+  ).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  const qfMatchesRaw = matches.filter(m => m.round === "Quarter Final" || m.round?.toLowerCase().includes("quarter final") || m.round?.toLowerCase().includes("qf")).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  const sfMatchesRaw = matches.filter(m => m.round === "Semi Final" || m.round?.toLowerCase().includes("semi final") || m.round?.toLowerCase().includes("sf")).sort((a, b) => (a.matchIndex || 0) - (b.matchIndex || 0));
+  const finalMatchRaw = matches.find(m => m.round === "Grand Final" || m.round?.toLowerCase().includes("grand final"));
+
+  const getWinnerFromMatches = (roundMatches: any[], relativeIdx: number) => {
+    const match = roundMatches[relativeIdx];
+    if (!match || match.status !== 'completed') return null;
+    return match.homeScore > match.awayScore ? match.homePlayerName : match.awayPlayerName;
+  };
+
+  // 3. Round Definitions
+  const rounds = [];
+  if (startRound === 'R16') {
+    const m = Array.from({ length: 8 }, (_, i) => r16MatchesRaw[i] || { id: `p-r16-${i}`, round: 'Round of 16', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending', matchIndex: i + 1 });
+    rounds.push({ id: 'R16', matches: m, title: 'Round of 16' });
+  }
+  if (startRound === 'R16' || startRound === 'QF') {
+    const m = Array.from({ length: 4 }, (_, i) => qfMatchesRaw[i] || { id: `p-qf-${i}`, round: 'Quarter Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending', matchIndex: i + 1 });
+    rounds.push({ id: 'QF', matches: m, title: 'Quarter Finals' });
+  }
+  const sfMatches = Array.from({ length: 2 }, (_, i) => sfMatchesRaw[i] || { id: `p-sf-${i}`, round: 'Semi Final', homePlayerName: 'TBD', awayPlayerName: 'TBD', status: 'pending', matchIndex: i + 1 });
+  rounds.push({ id: 'SF', matches: sfMatches, title: 'Semi Finals' });
+
+  const homeWinnerFromSF = getWinnerFromMatches(sfMatches, 0) || 'TBD';
+  const awayWinnerFromSF = getWinnerFromMatches(sfMatches, 1) || 'TBD';
+  
+  const finalMatch = finalMatchRaw ? {
+    ...finalMatchRaw,
+    homePlayerName: (finalMatchRaw.homePlayerName === 'TBD' || !finalMatchRaw.homePlayerName) ? homeWinnerFromSF : finalMatchRaw.homePlayerName,
+    awayPlayerName: (finalMatchRaw.awayPlayerName === 'TBD' || !finalMatchRaw.awayPlayerName) ? awayWinnerFromSF : finalMatchRaw.awayPlayerName,
+  } : { 
+    id: 'p-final', 
+    round: 'Grand Final', 
+    homePlayerName: homeWinnerFromSF, 
+    awayPlayerName: awayWinnerFromSF, 
+    status: 'pending', 
+    matchIndex: 1 
+  };
+
+  const winnerInfo = (() => {
+    if (!finalMatch || finalMatch.status !== 'completed') return null;
+    const isHomeWinner = finalMatch.homeScore > finalMatch.awayScore;
+    const winnerId = isHomeWinner ? finalMatch.homePlayerId : finalMatch.awayPlayerId;
+    const winnerName = isHomeWinner ? finalMatch.homePlayerName : finalMatch.awayPlayerName;
+    
+    const tournamentGoals = matches.reduce((sum, m) => {
+      let goals = 0;
+      if (m.homePlayerId === winnerId) goals += (m.homeScore || 0);
+      if (m.awayPlayerId === winnerId) goals += (m.awayScore || 0);
+      return sum + goals;
+    }, 0);
+    
+    return { name: winnerName, goals: tournamentGoals };
+  })();
+
+  // 4. Layout Calculations
+  const CARD_HEIGHT = 130;
+  const GAP_BASE = 32;
+  const COLUMN_WIDTH = 56;
+  const cx = COLUMN_WIDTH / 2;
+  const LINE_COLOR = 'rgba(15, 164, 175, 0.2)';
+
+  const roundYs: Record<string, number[]> = {};
+  rounds.forEach((round, idx) => {
+    if (idx === 0) {
+      roundYs[round.id] = Array.from({ length: round.matches.length }, (_, i) => (CARD_HEIGHT / 2) + i * (CARD_HEIGHT + GAP_BASE));
+    } else {
+      const prevYs = roundYs[rounds[idx-1].id];
+      roundYs[round.id] = Array.from({ length: round.matches.length }, (_, i) => (prevYs[i*2] + prevYs[i*2 + 1]) / 2);
+    }
+  });
+
+  const lastRoundYs = roundYs[rounds[rounds.length-1].id];
+  const finalY = (lastRoundYs.length === 2) ? (lastRoundYs[0] + lastRoundYs[1]) / 2 : lastRoundYs[0];
+  const totalHeight = (rounds[0].matches.length) * (CARD_HEIGHT + GAP_BASE);
+
+  return (
+    <div className="space-y-24">
+      <style>{`
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+      `}</style>
+      {/* Qualifiers Summary Section */}
+      {isHybrid && groups.length > 0 && (
+        <div className="flex flex-wrap gap-4 px-4 md:px-0">
+          {groups.map((g) => {
+            const topPlayers = (groupedPlayers[g] || []).slice(0, 2);
+            return (
+              <div key={g} className="bg-white/5 border border-white/10 rounded-2xl p-4 min-w-[180px] flex-1 backdrop-blur-sm">
+                <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-3">Group {g} Top Players</p>
+                <div className="space-y-2">
+                  {topPlayers.map((p, i) => (
+                    <div key={p.id} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="text-[10px] font-black text-primary/40 italic">#{i+1}</span>
+                        <span className="text-xs font-bold text-white/80 truncate">{p.name}</span>
+                      </div>
+                      <Shield className="w-3 h-3 text-primary/20" />
+                    </div>
+                  ))}
+                  {topPlayers.length === 0 && <span className="text-[10px] text-white/20 italic">No rankings yet</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bracket Section */}
+      <div className="flex items-start p-2 min-w-max">
+        {rounds.map((round, rIdx) => {
+          const currentYs = roundYs[round.id];
+          const nextRound = rounds[rIdx + 1];
+
+          return (
+            <Fragment key={round.id}>
+              <div className="flex flex-col shrink-0" style={{ gap: GAP_BASE }}>
+                {round.matches.map((m: any, mIdx: number) => {
+                  const y = currentYs[mIdx];
+                  const topOffset = mIdx === 0 ? y - (CARD_HEIGHT / 2) : (y - currentYs[mIdx-1]) - CARD_HEIGHT - GAP_BASE;
+                  return (
+                    <div key={m.id} style={{ marginTop: topOffset }}>
+                      <MatchNode match={m} title={`${round.title} — #${m.matchIndex || mIdx + 1}`} height={CARD_HEIGHT} />
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {nextRound ? (
+                <svg width={COLUMN_WIDTH} height={totalHeight} className="shrink-0">
+                  {currentYs.map((y, i) => i % 2 === 0 && (
+                    <path 
+                      key={i} 
+                      stroke={LINE_COLOR} 
+                      strokeWidth="2" 
+                      fill="none" 
+                      d={`M 0 ${y} H ${cx} V ${currentYs[i+1]} M 0 ${currentYs[i+1]} H ${cx} M ${cx} ${roundYs[nextRound.id][i/2]} H ${COLUMN_WIDTH}`} 
+                    />
+                  ))}
+                </svg>
+              ) : (
+                <svg width={COLUMN_WIDTH} height={totalHeight} className="shrink-0">
+                  {currentYs.length === 2 ? (
+                    <path stroke={LINE_COLOR} strokeWidth="2" fill="none" d={`M 0 ${currentYs[0]} H ${cx} V ${currentYs[1]} M 0 ${currentYs[1]} H ${cx} M ${cx} ${finalY} H ${COLUMN_WIDTH}`} />
+                  ) : (
+                    <path stroke={LINE_COLOR} strokeWidth="2" fill="none" d={`M 0 ${currentYs[0]} H ${COLUMN_WIDTH}`} />
+                  )}
+                </svg>
+              )}
+            </Fragment>
+          );
+        })}
+
+        <div className="flex items-center" style={{ height: totalHeight }}>
+          <div className="group perspective-1000 w-[280px] h-[380px] relative">
+            <div className="relative w-full h-full transition-all duration-700 transform-style-3d group-hover:rotate-y-180">
+              {/* Front Face */}
+              <div className="absolute inset-0 backface-hidden">
+                <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_60px_rgba(15,164,175,0.3)] w-full h-full">
+                  <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-4 flex flex-col items-center gap-3 text-center border border-white/5 h-full">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full animate-pulse" />
+                      <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center border border-primary/30 shadow-inner">
+                        <Trophy className="w-8 h-8 text-primary shadow-glow" />
+                      </div>
+                    </div>
+                    <div className="space-y-0.5">
+                      <h3 className="text-xl font-black italic uppercase tracking-tighter text-white leading-tight">Grand Final</h3>
+                      <p className="text-[9px] text-white/30 uppercase font-black tracking-[0.3em]">The Ultimate Showdown</p>
+                    </div>
+                    <div className="flex flex-col gap-3 w-full">
+                       <div className={`p-3 rounded-2xl transition-all ${finalMatch.status === 'completed' && finalMatch.homeScore > finalMatch.awayScore ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/20 scale-105' : 'bg-white/[0.02] border border-white/5 opacity-50'}`}>
+                         <span className={`text-base font-black italic uppercase tracking-tighter block truncate ${finalMatch.status === 'completed' && finalMatch.homeScore > finalMatch.awayScore ? 'text-white' : 'text-white/40'}`}>
+                           {finalMatch.homePlayerName}
+                         </span>
+                       </div>
+                       <div className="flex items-center gap-3 px-3 overflow-hidden">
+                         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-primary/30" />
+                         <span className="text-primary font-black italic text-lg tracking-widest drop-shadow-[0_0_8px_rgba(15,164,175,0.4)]">VS</span>
+                         <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-primary/30" />
+                       </div>
+                       <div className={`p-3 rounded-2xl transition-all ${finalMatch.status === 'completed' && finalMatch.awayScore > finalMatch.homeScore ? 'bg-primary/10 border border-primary/20 ring-1 ring-primary/20 scale-105' : 'bg-white/[0.02] border border-white/5 opacity-50'}`}>
+                         <span className={`text-base font-black italic uppercase tracking-tighter block truncate ${finalMatch.status === 'completed' && finalMatch.awayScore > finalMatch.homeScore ? 'text-white' : 'text-white/40'}`}>
+                           {finalMatch.awayPlayerName}
+                         </span>
+                       </div>
+                    </div>
+                    {finalMatch.status === 'completed' && (
+                      <div className="w-full px-5 py-3 bg-primary text-background-dark rounded-xl font-black text-lg italic tracking-tighter shadow-[0_8px_25px_rgba(15,164,175,0.4)] text-center mt-auto">
+                        {finalMatch.homeScore} - {finalMatch.awayScore}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Back Face */}
+              <div className="absolute inset-0 backface-hidden rotate-y-180">
+                <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-t from-primary via-primary/20 to-transparent shadow-[0_20px_60px_rgba(15,164,175,0.3)] w-full h-full">
+                  <div className="bg-background-dark/90 backdrop-blur-2xl rounded-[2.4rem] p-5 flex flex-col items-center justify-center gap-4 text-center border border-white/5 h-full overflow-hidden">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full animate-pulse" />
+                      <Trophy className="w-12 h-12 text-primary shadow-glow relative" />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">CHAMPION</h3>
+                      <p className="text-lg font-black text-primary uppercase italic tracking-widest truncate max-w-[220px]">
+                        {winnerInfo ? winnerInfo.name : "TBD"}
+                      </p>
+                    </div>
+                    <div className="w-full p-4 bg-primary/10 border border-primary/20 rounded-2xl space-y-1">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Total Tournament Goals</p>
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="text-4xl font-black text-primary italic drop-shadow-[0_0_15px_rgba(15,164,175,0.5)]">
+                          {winnerInfo ? winnerInfo.goals : "0"}
+                        </span>
+                        <div className="h-6 w-0.5 bg-white/10 rounded-full" />
+                        <span className="text-[10px] font-black text-white/60 uppercase tracking-widest italic">Goals</span>
+                      </div>
+                    </div>
+                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Hover to see match result</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+

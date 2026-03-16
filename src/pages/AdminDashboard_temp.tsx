@@ -43,21 +43,6 @@ export default function AdminDashboard() {
   const [manualPlayerData, setManualPlayerData] = useState({ name: "", efootballId: "", phone: "" });
   const [isLaunching, setIsLaunching] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [dialog, setDialog] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: 'alert' | 'confirm';
-    onConfirm?: () => void;
-  }>({ isOpen: false, title: '', message: '', type: 'alert' });
-
-  const showAlert = (title: string, message: string) => {
-    setDialog({ isOpen: true, title, message, type: 'alert' });
-  };
-
-  const showConfirm = (title: string, message: string, onConfirm: () => void) => {
-    setDialog({ isOpen: true, title, message, type: 'confirm', onConfirm });
-  };
 
   const [showNewMatchForm, setShowNewMatchForm] = useState(false);
   const [newMatchData, setNewMatchData] = useState({ homePlayerId: "", awayPlayerId: "", stage: "Knockout" });
@@ -186,7 +171,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('players').update({ status }).eq('id', id);
     if (error) {
       console.error("Update player status error:", error);
-      showAlert("Update Error", "Failed to update player status: " + error.message);
+      alert("Failed to update player status: " + error.message);
       // Data will revert on next subscription fetch
     }
   };
@@ -201,7 +186,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('tournaments').update({ [field]: value }).eq('id', selectedTournament.id);
     if (error) {
       console.error("Update settings error:", error);
-      showAlert("Update Error", "Failed to update settings: " + error.message);
+      alert("Failed to update settings: " + error.message);
     }
   };
 
@@ -215,7 +200,7 @@ export default function AdminDashboard() {
     }).eq('id', id);
     if (error) {
       console.error("Update match score error:", error);
-      showAlert("Update Error", "Failed to update match score: " + error.message);
+      alert("Failed to update match score: " + error.message);
     } else {
       // If match is already completed, recalculate standings
       const match = matches.find(m => m.id === id);
@@ -335,7 +320,7 @@ export default function AdminDashboard() {
 
       if (newMatches.length > 0) {
         await supabase.from('matches').insert(newMatches);
-        showAlert("Automated Advance", `All groups completed. ${nextStage} fixtures have been generated with dynamic cross-seeding!`);
+        alert(`Automated Advance: All groups completed. ${nextStage} fixtures have been generated with dynamic cross-seeding!`);
       }
       return; // Exit as we handled the transition
     } else if (lowerStage === "round 1" || lowerStage === "round of 16" || lowerStage === "quarter final" || lowerStage === "semi final") {
@@ -381,7 +366,7 @@ export default function AdminDashboard() {
 
     if (newMatches.length > 0) {
       await supabase.from('matches').insert(newMatches);
-      showAlert("Automated Advance", `All ${latestStage} matches completed. ${nextStage} fixtures have been randomized and generated!`);
+      alert(`Automated Advance: All ${latestStage} matches completed. ${nextStage} fixtures have been randomized and generated!`);
     }
   };
 
@@ -393,7 +378,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('matches').update({ status: newStatus }).eq('id', id);
     if (error) {
       console.error("Toggle match status error:", error);
-      showAlert("Update Error", "Failed to toggle match status: " + error.message);
+      alert("Failed to toggle match status: " + error.message);
     } else if (selectedTournament) {
       // Always recalculate standings when status changes (either to completed or away from it)
       await recalculateStandings(selectedTournament.id);
@@ -410,59 +395,47 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('players').update({ [field]: value }).eq('id', id);
     if (error) {
       console.error("Update player stats error:", error);
-      showAlert("Update Error", "Failed to update player stats: " + error.message);
+      alert("Failed to update player stats: " + error.message);
     }
   };
 
   const deletePlayer = async (id: string) => {
-    showConfirm(
-      "Confirm Deletion",
-      "Are you sure you want to permanently delete this player?",
-      async () => {
-        // Optimistic delete
-        setPlayers(prev => prev.filter(p => p.id !== id));
+    if (window.confirm("Are you sure you want to permanently delete this player?")) {
+      // Optimistic delete
+      setPlayers(prev => prev.filter(p => p.id !== id));
 
-        const { error } = await supabase.from('players').delete().eq('id', id);
-        if (error) {
-          console.error("Delete player error:", error);
-          showAlert("Delete Error", "Failed to delete player: " + error.message);
-        }
+      const { error } = await supabase.from('players').delete().eq('id', id);
+      if (error) {
+        console.error("Delete player error:", error);
+        alert("Failed to delete player: " + error.message);
       }
-    );
+    }
   };
 
   const deleteMatch = async (id: string) => {
-    showConfirm(
-      "Confirm Deletion",
-      "Are you sure you want to delete this match?",
-      async () => {
-        setMatches(prev => prev.filter(m => m.id !== id));
-        const { error } = await supabase.from('matches').delete().eq('id', id);
-        if (error) {
-          console.error("Delete match error:", error);
-          showAlert("Delete Error", "Failed to delete match: " + error.message);
-        }
+    if (window.confirm("Are you sure you want to delete this match?")) {
+      setMatches(prev => prev.filter(m => m.id !== id));
+      const { error } = await supabase.from('matches').delete().eq('id', id);
+      if (error) {
+        console.error("Delete match error:", error);
+        alert("Failed to delete match: " + error.message);
       }
-    );
+    }
   };
 
   const deleteAllMatches = async () => {
     if (!selectedTournament) return;
-    showConfirm(
-      "CRITICAL: Wipe Matches",
-      "This will permanently delete ALL matches in this tournament. This cannot be undone. Are you sure?",
-      async () => {
-        const { error } = await supabase.from('matches').delete().eq('tournamentId', selectedTournament.id);
-        if (error) {
-          console.error("Delete all matches error:", error);
-          showAlert("Delete Error", "Failed to delete all matches: " + error.message);
-        } else {
-          setMatches([]);
-          await recalculateStandings(selectedTournament.id);
-          showAlert("Format Reset", "All matches deleted and standings reset.");
-        }
+    if (window.confirm("CRITICAL: This will permanently delete ALL matches in this tournament. This cannot be undone. Are you sure?")) {
+      const { error } = await supabase.from('matches').delete().eq('tournamentId', selectedTournament.id);
+      if (error) {
+        console.error("Delete all matches error:", error);
+        alert("Failed to delete all matches: " + error.message);
+      } else {
+        setMatches([]);
+        await recalculateStandings(selectedTournament.id);
+        alert("All matches deleted and standings reset.");
       }
-    );
+    }
   };
 
   const reseedStage = async (tournamentId: string) => {
@@ -490,31 +463,28 @@ export default function AdminDashboard() {
     const latestStage = sortedStages[0];
 
     if (!latestStage || latestStage.toLowerCase().startsWith('group')) {
-      showAlert("Note", "Current stage is Group Stage. Use 'Fixture Wizard' to modify groups.");
+      alert("Current stage is Group Stage. Use 'Fixture Wizard' to modify groups.");
       return;
     }
 
-    showConfirm(
-      "Confirm Re-seed",
-      `This will RE-GENERATE all matches for "${latestStage}" based on the previous round's winners. Any results in "${latestStage}" will be lost. Proceed?`,
-      async () => {
-        // 2. Delete matches of the LATEST knockout stage
-        const { error: delError } = await supabase
-          .from('matches')
-          .delete()
-          .eq('tournamentId', tournamentId)
-          .eq('round', latestStage);
+    if (!window.confirm(`This will RE-GENERATE all matches for "${latestStage}" based on the previous round's winners. Any results in "${latestStage}" will be lost. Proceed?`)) return;
 
-        if (delError) {
-          showAlert("Error", "Failed to clear stage: " + delError.message);
-          return;
-        }
+    // 2. Delete matches of the LATEST knockout stage
+    const { error: delError } = await supabase
+      .from('matches')
+      .delete()
+      .eq('tournamentId', tournamentId)
+      .eq('round', latestStage);
 
-        // 3. Trigger auto-advance from the round before
-        await autoAdvanceStage(tournamentId);
-        showAlert("Success", `Successfully re-seeded the ${latestStage} stage!`);
-      }
-    );
+    if (delError) {
+      alert("Failed to clear stage: " + delError.message);
+      return;
+    }
+
+    // 3. Trigger auto-advance from the round before
+    // autoAdvanceStage fetches the latest data itself, so it will see the previous round as completed and current round empty
+    await autoAdvanceStage(tournamentId);
+    alert(`Successfully re-seeded the ${latestStage} stage!`);
   };
 
   const updateMatchDetails = async (id: string, updates: any) => {
@@ -522,7 +492,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('matches').update(updates).eq('id', id);
     if (error) {
       console.error("Update match details error:", error);
-      showAlert("Update Error", "Failed to update match details: " + error.message);
+      alert("Failed to update match details: " + error.message);
     }
   };
 
@@ -531,7 +501,7 @@ export default function AdminDashboard() {
     if (!selectedTournament) return;
 
     if (newMatchData.homePlayerId === newMatchData.awayPlayerId) {
-      showAlert("Invalid Match", "A player cannot play against themselves.");
+      alert("A player cannot play against themselves.");
       return;
     }
 
@@ -555,7 +525,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('matches').insert([matchDoc]);
     if (error) {
       console.error("Create match error:", error);
-      showAlert("Create Error", "Failed to create match: " + error.message);
+      alert("Failed to create match: " + error.message);
     } else {
       setShowNewMatchForm(false);
       setNewMatchData({ homePlayerId: "", awayPlayerId: "", stage: "Knockout" });
@@ -564,24 +534,20 @@ export default function AdminDashboard() {
 
   const deleteTournament = async (e: any, id: string) => {
     e.stopPropagation();
-    showConfirm(
-      "Confirm Deletion",
-      "WARNING: Are you sure you want to completely delete this tournament? This cannot be undone.",
-      async () => {
-        // Optimistic delete
-        setTournaments(prev => prev.filter(t => t.id !== id));
-        if (selectedTournament?.id === id) {
-          setSelectedTournament(null);
-          navigate("/admin");
-        }
-
-        const { error } = await supabase.from('tournaments').delete().eq('id', id);
-        if (error) {
-          console.error("Delete tournament error:", error);
-          showAlert("Delete Error", "Failed to delete tournament: " + error.message);
-        }
+    if (window.confirm("WARNING: Are you sure you want to completely delete this tournament? This cannot be undone.")) {
+      // Optimistic delete
+      setTournaments(prev => prev.filter(t => t.id !== id));
+      if (selectedTournament?.id === id) {
+        setSelectedTournament(null);
+        navigate("/admin");
       }
-    );
+
+      const { error } = await supabase.from('tournaments').delete().eq('id', id);
+      if (error) {
+        console.error("Delete tournament error:", error);
+        alert("Failed to delete tournament: " + error.message);
+      }
+    }
   };
 
   const toggleTournamentVisibility = async (e: any, t: any) => {
@@ -597,7 +563,7 @@ export default function AdminDashboard() {
     const { error } = await supabase.from('tournaments').update({ isHidden: newHidden }).eq('id', t.id);
     if (error) {
       console.error("Toggle visibility error:", error);
-      showAlert("Update Error", "Failed to toggle visibility: " + error.message);
+      alert("Failed to toggle visibility: " + error.message);
     }
   };
 
@@ -721,46 +687,6 @@ Match Rules:
     setGroupAssignments(newAssignments);
   };
 
-  const performLaunch = async () => {
-    setIsLaunching(true);
-    try {
-      const { error: matchError } = await supabase.from('matches').insert(wizardMatches);
-      if (matchError) {
-        showAlert("Launch Error", "Failed to insert matches: " + matchError.message);
-        setIsLaunching(false);
-        return;
-      }
-
-      // Update player groups based on wizard assignments
-      for (const [groupKey, groupPlayers] of Object.entries(groupAssignments)) {
-        const pIds = (groupPlayers as any[]).map(p => p.id);
-        if (pIds.length > 0) {
-          const { error: pError } = await supabase
-            .from('players')
-            .update({ "group": groupKey })
-            .in('id', pIds);
-          if (pError) console.error(`Error updating group ${groupKey}:`, pError);
-        }
-      }
-
-      // Update tournament status and rules
-      await updateSettings("activeStage", selectedFormat === 'knockout' ? 'knockout' : 'groups');
-      await updateSettings("rules", wizardRules);
-      await updateSettings("groupCount", wizardGroupCount);
-      await updateSettings("format", selectedFormat);
-      await updateSettings("target_qualifiers", targetQualifiers);
-      await updateSettings("qualifiers_per_group", qualifiersPerGroup);
-
-      setIsGeneratingFixtures(false);
-      setShowSuccessModal(true);
-    } catch (err) {
-      console.error("Launch error:", err);
-      showAlert("Launch Error", "An unexpected error occurred during launch.");
-    } finally {
-      setIsLaunching(false);
-    }
-  };
-
   const handleManualAddPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTournament) return;
@@ -776,7 +702,7 @@ Match Rules:
     ]).select();
 
     if (error) {
-      showAlert("Add Error", "Failed to add player: " + error.message);
+      alert("Failed to add player: " + error.message);
     } else {
       // Optimistic/Immediate update of local state
       if (newPlayer && newPlayer.length > 0) {
@@ -817,7 +743,7 @@ Match Rules:
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full h-12 px-4 bg-background-dark border border-primary/20 rounded-lg text-white focus:ring-1 focus:ring-secondary outline-none"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
             />
           </div>
           <button type="submit" className="w-full mt-2 px-6 py-3 bg-secondary text-white font-bold rounded-lg hover:brightness-110 transition-all shadow-[0_0_15px_rgba(150,71,52,0.4)]">
@@ -1070,10 +996,10 @@ Match Rules:
             >
               <div className="flex flex-col">
                 <span className={`text-sm font-bold uppercase tracking-tight italic ${selectedTournament?.isPaid ? 'text-yellow-400' : 'text-white/50'}`}>
-                  {selectedTournament?.isPaid ? "ðŸ’° Paid Tournament" : "ðŸ†“ Free Tournament"}
+                  {selectedTournament?.isPaid ? "💰 Paid Tournament" : "🆓 Free Tournament"}
                 </span>
                 <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-tight">
-                  {selectedTournament?.isPaid ? "Entry fee required â€” prizes shown" : "No entry, no prize shown"}
+                  {selectedTournament?.isPaid ? "Entry fee required — prizes shown" : "No entry, no prize shown"}
                 </span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
@@ -1101,9 +1027,9 @@ Match Rules:
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Registration Fee (â‚¹)</label>
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Registration Fee (₹)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">â‚¹</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">₹</span>
                   <input
                     value={selectedTournament?.entryFee || ""}
                     onChange={(e) => updateSettings("entryFee", e.target.value)}
@@ -1114,12 +1040,12 @@ Match Rules:
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (â‚¹) â€” Fill what applies</label>
+                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (₹) — Fill what applies</label>
                 {[
-                  { key: "prize1st", emoji: "ðŸ¥‡", label: "1st â€” Winner" },
-                  { key: "prize2nd", emoji: "ðŸ¥ˆ", label: "2nd â€” Runner-up" },
-                  { key: "prize3rd", emoji: "ðŸ¥‰", label: "3rd Place" },
-                  { key: "prize4th", emoji: "4ï¸âƒ£", label: "4th Place" },
+                  { key: "prize1st", emoji: "🥇", label: "1st — Winner" },
+                  { key: "prize2nd", emoji: "🥈", label: "2nd — Runner-up" },
+                  { key: "prize3rd", emoji: "🥉", label: "3rd Place" },
+                  { key: "prize4th", emoji: "4️⃣", label: "4th Place" },
                 ].map(({ key, emoji, label }) => (
                   <div key={key} className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">{emoji}</span>
@@ -1927,33 +1853,61 @@ Match Rules:
                     </div>
 
                     <div className="flex gap-4">
-                      <button 
-                        onClick={() => setFixtureWizardStep(4)} 
-                        className="flex-1 px-8 py-4 bg-white/5 text-white font-black uppercase text-xs tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all"
-                      >
-                        Back
-                      </button>
-                      <button
+                      <button onClick={() => setFixtureWizardStep(4)} className="flex-1 px-8 py-4 bg-white/5 text-white font-black uppercase text-xs tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                                  <button
                         onClick={async () => {
                           if (isLaunching) return;
                           
+                          // Final safety check: if matches already exist, don't insert again
                           if (matches.length > 0) {
-                            showConfirm(
-                              "Confirm Launch",
-                              "Matches already exist for this tournament. Launching again will create duplicates. Are you sure?",
-                              async () => {
-                                await performLaunch();
-                              }
-                            );
-                            return;
+                            if (!window.confirm("Matches already exist for this tournament. Launching again will create duplicates. Are you sure?")) {
+                              return;
+                            }
                           }
 
-                          await performLaunch();
+                          setIsLaunching(true);
+                          try {
+                            const { error: matchError } = await supabase.from('matches').insert(wizardMatches);
+                            if (matchError) {
+                              alert("Failed to insert matches: " + matchError.message);
+                              setIsLaunching(false);
+                              return;
+                            }
+
+                            // Update player groups based on wizard assignments
+                            for (const [groupKey, groupPlayers] of Object.entries(groupAssignments)) {
+                              const pIds = (groupPlayers as any[]).map(p => p.id);
+                              if (pIds.length > 0) {
+                                const { error: pError } = await supabase
+                                  .from('players')
+                                  .update({ "group": groupKey })
+                                  .in('id', pIds);
+                                if (pError) console.error(`Error updating group ${groupKey}:`, pError);
+                              }
+                            }
+
+                            // Update tournament status and rules
+                            await updateSettings("activeStage", selectedFormat === 'knockout' ? 'knockout' : 'groups');
+                            await updateSettings("rules", wizardRules);
+                            await updateSettings("groupCount", wizardGroupCount);
+                            await updateSettings("format", selectedFormat);
+                            await updateSettings("target_qualifiers", targetQualifiers);
+                            await updateSettings("qualifiers_per_group", qualifiersPerGroup);
+
+                            setIsGeneratingFixtures(false);
+                            setShowSuccessModal(true);
+                          } catch (err) {
+                            console.error("Launch error:", err);
+                          } finally {
+                            setIsLaunching(false);
+                          }
                         }}
                         disabled={isLaunching}
                         className={`flex-[2] px-8 py-4 ${isLaunching ? 'bg-white/10 text-white/40 cursor-not-allowed' : 'bg-secondary text-white hover:brightness-110 shadow-[0_10px_25px_rgba(239,68,68,0.2)]'} font-black uppercase text-xs tracking-widest rounded-2xl transition-all`}
                       >
                         {isLaunching ? 'Launching...' : '🚀 Launch Tournament'}
+                      </button>
+� Launch Tournament
                       </button>
                     </div>
                   </div>
@@ -2311,70 +2265,6 @@ Match Rules:
           </div>
         </main>
       </div>
-      {/* Custom Dialog */}
-      {dialog.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="w-full max-w-sm glass-panel p-8 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center gap-6">
-              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center ${dialog.type === 'confirm' ? 'bg-secondary/20 text-secondary' : 'bg-primary/20 text-primary'}`}>
-                {dialog.type === 'confirm' ? <Trash2 className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">{dialog.title}</h3>
-                <p className="text-white/40 text-sm font-medium leading-relaxed">{dialog.message}</p>
-              </div>
-              <div className="flex gap-3 w-full">
-                {dialog.type === 'confirm' && (
-                  <button
-                    onClick={() => setDialog({ ...dialog, isOpen: false })}
-                    className="flex-1 px-6 py-4 bg-white/5 text-white font-black uppercase text-[10px] tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all"
-                  >
-                    Cancel
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    if (dialog.type === 'confirm' && dialog.onConfirm) {
-                      dialog.onConfirm();
-                    }
-                    setDialog({ ...dialog, isOpen: false });
-                  }}
-                  className={`flex-1 px-6 py-4 font-black uppercase text-[10px] tracking-widest rounded-2xl transition-all ${dialog.type === 'confirm' ? 'bg-secondary text-white hover:brightness-110 shadow-lg shadow-secondary/10' : 'bg-primary text-background-dark hover:brightness-110 shadow-lg shadow-primary/10'}`}
-                >
-                  {dialog.type === 'confirm' ? 'Confirm' : 'Got it'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-md animate-in fade-in duration-500">
-          <div className="w-full max-w-md glass-panel p-10 rounded-[3rem] border border-primary/20 shadow-[0_0_50px_rgba(15,164,175,0.2)] animate-in zoom-in-95 duration-500 text-center space-y-8">
-            <div className="relative">
-              <div className="w-24 h-24 bg-primary/20 text-primary rounded-[2rem] flex items-center justify-center mx-auto animate-bounce">
-                <Trophy className="w-12 h-12" />
-              </div>
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24 bg-primary/40 rounded-[2rem] animate-ping opacity-20"></div>
-            </div>
-            <div className="space-y-3">
-              <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white">Tournament Live!</h2>
-              <p className="text-white/40 text-sm font-medium leading-relaxed">The arena is ready. All fixtures have been generated and the public board is now live.</p>
-            </div>
-            <button
-              onClick={() => {
-                setShowSuccessModal(false);
-                navigate(`/tournament/${selectedTournament?.id || selectedTournament?.name}`);
-              }}
-              className="w-full px-8 py-5 bg-primary text-background-dark font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-[0_20px_40px_rgba(15,164,175,0.3)]"
-            >
-              Go to Public View
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
