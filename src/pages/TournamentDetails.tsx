@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { supabase } from "../supabase";
 import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import confetti from 'canvas-confetti';
 
 export default function TournamentDetails() {
   const { id } = useParams();
@@ -57,13 +58,38 @@ export default function TournamentDetails() {
         .select('id, name, phone, efootballId, status, group, points, gd, gf, ga, played, wins, draws, losses')
         .eq('status', 'approved')
         .eq('tournamentId', activeTournament.id);
-      if (pData) setPlayers(pData);
 
       const { data: mData } = await supabase
         .from('matches')
         .select('id, homePlayerId, awayPlayerId, homePlayerName, awayPlayerName, homeScore, awayScore, status, round, matchIndex')
         .eq('tournamentId', activeTournament.id);
+
       if (mData) setMatches(mData);
+
+      if (pData) {
+        // Calculate GF/GA on the fly for public view robustness
+        const enrichedPlayers = pData.map(player => {
+          const playerMatches = (mData || []).filter(m => 
+            m.status === 'completed' && 
+            (m.homePlayerId === player.id || m.awayPlayerId === player.id)
+          );
+          
+          let gf = 0;
+          let ga = 0;
+          playerMatches.forEach(m => {
+            if (m.homePlayerId === player.id) {
+              gf += (m.homeScore || 0);
+              ga += (m.awayScore || 0);
+            } else {
+              gf += (m.awayScore || 0);
+              ga += (m.homeScore || 0);
+            }
+          });
+
+          return { ...player, gf, ga, gd: gf - ga };
+        });
+        setPlayers(enrichedPlayers);
+      }
     };
 
     fetchData();
@@ -232,7 +258,7 @@ export default function TournamentDetails() {
 
           {activeTab === "bracket" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-x-auto pb-12 scrollbar-hide">
-              <BracketView matches={matches} tournament={activeTournament} playerCount={players.length} groups={groups} groupedPlayers={groupedPlayers} />
+              <BracketView matches={matches} tournament={activeTournament} playerCount={players.length} groups={groups} groupedPlayers={groupedPlayers} activeTab={activeTab} />
             </section>
           )}
 
@@ -260,7 +286,7 @@ export default function TournamentDetails() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/5">
-                      {players.map((p) => (
+                      {[...players].sort((a, b) => (b.gf || 0) - (a.gf || 0)).map((p) => (
                         <tr key={p.id} className="hover:bg-primary/5">
                           <td className="px-6 py-3 font-bold text-white truncate">{p.name}</td>
                           <td className="px-6 py-3 text-background-light/80 text-xs truncate">{p.phone || "N/A"}</td>
@@ -337,7 +363,18 @@ export default function TournamentDetails() {
                       acc[r].push(m);
                       return acc;
                     }, {})
-                  ).sort(([a], [b]) => a.localeCompare(b)).map(([roundName, roundMatches]) => (
+                  ).sort(([a], [b]) => {
+                    const priority = (s: string) => {
+                      const lower = s.toLowerCase();
+                      if (lower.includes('round of 16') || lower.includes('r16') || lower === 'round 1' || lower === 'knockout') return 1;
+                      if (lower.includes('quarter final')) return 2;
+                      if (lower.includes('semi final')) return 3;
+                      if (lower.includes('grand final')) return 4;
+                      if (lower.startsWith('group')) return 0;
+                      return 99;
+                    };
+                    return priority(a) - priority(b);
+                  }).map(([roundName, roundMatches]) => (
                     <div key={roundName} className="space-y-4">
                       <h3 className="text-xl font-black italic uppercase tracking-widest text-primary border-b border-primary/20 pb-2">
                         {roundName}
@@ -595,7 +632,7 @@ const MatchNode = ({ match, title, height }: MatchNodeProps) => {
   );
 };
 
-const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers }: { matches: any[], tournament: any, playerCount: number, groups: string[], groupedPlayers: Record<string, any[]> }) => {
+const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers, activeTab }: { matches: any[], tournament: any, playerCount: number, groups: string[], groupedPlayers: Record<string, any[]>, activeTab: string }) => {
   const isHybrid = tournament?.format?.toLowerCase() === 'hybrid';
   const isKnockoutStarted = tournament?.activeStage === 'knockout' || tournament?.activeStage === 'finished';
 
@@ -605,7 +642,6 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers 
   const knockoutStartingRound = targetQuals <= 4 ? 'SF' : targetQuals <= 8 ? 'QF' : 'R16';
   const startRound = isHybrid && groups.length > 0 ? hybridStartingRound : knockoutStartingRound;
 
-  // 2. Fetch Raw Matches
   const r16MatchesRaw = matches.filter(m => 
     m.round === "Round 1" || 
     m.round === "Round of 16" || 
@@ -667,6 +703,35 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers 
     
     return { name: winnerName, goals: tournamentGoals };
   })();
+
+  const triggerConfetti = () => {
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    function randomInRange(min: number, max: number) {
+      return Math.random() * (max - min) + min;
+    }
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      // since particles fall down, start a bit higher than random
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+      confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+    }, 250);
+  };
+
+  useEffect(() => {
+    if (finalMatch.status === 'completed' && activeTab === 'bracket') {
+      triggerConfetti();
+    }
+  }, [finalMatch.status, activeTab]);
 
   // 4. Layout Calculations
   const CARD_HEIGHT = 130;
@@ -769,7 +834,12 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers 
         })}
 
         <div className="flex items-center" style={{ height: totalHeight }}>
-          <div className="group perspective-1000 w-[280px] h-[380px] relative">
+          <div 
+            className="group perspective-1000 w-[280px] h-[380px] relative"
+            onMouseEnter={() => {
+              if (finalMatch.status === 'completed') triggerConfetti();
+            }}
+          >
             <div className="relative w-full h-full transition-all duration-700 transform-style-3d group-hover:rotate-y-180">
               {/* Front Face */}
               <div className="absolute inset-0 backface-hidden">
