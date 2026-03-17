@@ -10,6 +10,7 @@ interface PlayerManagementProps {
   handleManualAddPlayer: (e: React.FormEvent) => void;
   updatePlayerStatus: (id: string, status: string) => void;
   overrideMode: boolean;
+  isSuperAdmin: boolean;
 }
 
 const PlayerManagement: React.FC<PlayerManagementProps> = ({
@@ -20,7 +21,8 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
   setManualPlayerData,
   handleManualAddPlayer,
   updatePlayerStatus,
-  overrideMode
+  overrideMode,
+  isSuperAdmin
 }) => {
   return (
     <section className="glass-panel rounded-[1.5rem] md:rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
@@ -96,7 +98,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
                   )}
                 </td>
                 <td className="px-5 md:px-8 py-4 md:py-6 text-right space-x-1.5 md:space-x-2">
-                  {overrideMode ? (
+                  {isSuperAdmin && overrideMode ? (
                     <>
                       <button onClick={() => updatePlayerStatus(player.id, "approved")} className="px-2.5 md:px-4 py-1.5 md:py-2 bg-primary/10 text-primary text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-lg md:rounded-xl hover:bg-primary/20 border border-primary/20 transition-all"><CheckCircle2 className="w-3.5 h-3.5 md:hidden" /><span className="hidden md:inline">Approve</span></button>
                       <button onClick={() => updatePlayerStatus(player.id, "banned")} className="px-2.5 md:px-4 py-1.5 md:py-2 bg-secondary/10 text-secondary text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-lg md:rounded-xl hover:bg-secondary/20 border border-secondary/20 transition-all"><XCircle className="w-3.5 h-3.5 md:hidden" /><span className="hidden md:inline">Reject</span></button>

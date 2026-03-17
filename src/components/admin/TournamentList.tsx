@@ -79,13 +79,15 @@ const TournamentList: React.FC<TournamentListProps> = ({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={(e) => toggleTournamentVisibility(e, t)}
-                      className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all duration-300 ${t.isHidden ? 'bg-slate-800/50 border-slate-700 text-slate-500 hover:bg-slate-800' : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20 hover:scale-105'}`}
-                      title={t.isHidden ? "Show Publicly" : "Hide from Public"}
-                    >
-                      {t.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={(e) => toggleTournamentVisibility(e, t)}
+                        className={`w-12 h-12 flex items-center justify-center rounded-2xl border transition-all duration-300 ${t.isHidden ? 'bg-slate-800/50 border-slate-700 text-slate-500 hover:bg-slate-800' : 'bg-primary/10 border-primary/20 text-primary hover:bg-primary/20 hover:scale-105'}`}
+                        title={t.isHidden ? "Show Publicly" : "Hide from Public"}
+                      >
+                        {t.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    )}
                     
                     {isSuperAdmin && (
                       <button
@@ -140,31 +142,33 @@ const TournamentList: React.FC<TournamentListProps> = ({
               </div>
             ))}
 
-            {isCreating ? (
-              <div className="w-full p-4 border border-primary/50 rounded-xl bg-primary/5 flex flex-col gap-3">
-                <input
-                  type="text"
-                  autoFocus
-                  value={newTourneyName}
-                  onChange={e => setNewTourneyName(e.target.value)}
-                  placeholder="Enter tournament name..."
-                  className="w-full bg-background-dark border border-primary/30 rounded-lg p-2 text-white focus:ring-1 focus:ring-primary outline-none"
-                />
-                <div className="flex gap-2 justify-end">
-                  <button onClick={() => { setIsCreating(false); setNewTourneyName(""); }} className="text-xs text-background-light/70 hover:text-white px-3 py-1.5 font-bold">Cancel</button>
-                  <button onClick={createTournament} className="bg-secondary text-white text-xs font-bold px-4 py-1.5 rounded-lg hover:brightness-110">
-                    Save
-                  </button>
+            {isSuperAdmin && (
+              isCreating ? (
+                <div className="w-full p-4 border border-primary/50 rounded-xl bg-primary/5 flex flex-col gap-3">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={newTourneyName}
+                    onChange={e => setNewTourneyName(e.target.value)}
+                    placeholder="Enter tournament name..."
+                    className="w-full bg-background-dark border border-primary/30 rounded-lg p-2 text-white focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => { setIsCreating(false); setNewTourneyName(""); }} className="text-xs text-background-light/70 hover:text-white px-3 py-1.5 font-bold">Cancel</button>
+                    <button onClick={createTournament} className="bg-secondary text-white text-xs font-bold px-4 py-1.5 rounded-lg hover:brightness-110">
+                      Save
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsCreating(true)}
-                className="w-full h-[72px] border border-dashed border-white/5 rounded-[1.5rem] flex items-center justify-center gap-3 text-white/20 hover:bg-white/5 hover:border-primary/30 transition-all text-[11px] font-extrabold uppercase tracking-wider px-5 py-2.5"
-              >
-                <Plus className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                <span>Start New Tournament</span>
-              </button>
+              ) : (
+                <button
+                  onClick={() => setIsCreating(true)}
+                  className="w-full h-[72px] border border-dashed border-white/5 rounded-[1.5rem] flex items-center justify-center gap-3 text-white/20 hover:bg-white/5 hover:border-primary/30 transition-all text-[11px] font-extrabold uppercase tracking-wider px-5 py-2.5"
+                >
+                  <Plus className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                  <span>Start New Tournament</span>
+                </button>
+              )
             )}
           </div>
         </div>

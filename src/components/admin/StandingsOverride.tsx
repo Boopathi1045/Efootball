@@ -6,13 +6,15 @@ interface StandingsOverrideProps {
   onDeletePlayer: (id: string) => Promise<void>;
   onEditPlayer: (id: string, newName: string) => Promise<void>;
   overrideMode: boolean;
+  isSuperAdmin: boolean;
 }
 
 const StandingsOverride: React.FC<StandingsOverrideProps> = ({ 
   approvedPlayers, 
   onDeletePlayer, 
   onEditPlayer,
-  overrideMode
+  overrideMode,
+  isSuperAdmin
 }) => {
   return (
     <section className="glass-panel rounded-[1.5rem] md:rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
@@ -52,7 +54,7 @@ const StandingsOverride: React.FC<StandingsOverrideProps> = ({
                   </span>
                 </td>
                 <td className="px-5 md:px-8 py-4 md:py-6 text-right space-x-2 md:space-x-3">
-                  {overrideMode ? (
+                  {isSuperAdmin && overrideMode ? (
                     <>
                       <button 
                         onClick={() => {

@@ -78,7 +78,7 @@ export default function AdminDashboard() {
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
-      if (session?.user?.email && ["admin@efootball.com", "rboopathi1045@gmail.com", "efootballtournament11@gmail.com"].includes(session.user.email)) {
+      if (session?.user) {
         setIsAdmin(true);
       }
       if (session?.user?.email === "efootballtournament11@gmail.com") {
@@ -93,9 +93,7 @@ export default function AdminDashboard() {
       // For flexibility, any email used to sign up in this dev phase can be considered admin
       // You can restrict this later by specific emails
       if (session?.user) {
-        if (session.user.email && ["admin@efootball.com", "rboopathi1045@gmail.com", "efootballtournament11@gmail.com"].includes(session.user.email)) {
-          setIsAdmin(true);
-        }
+        setIsAdmin(true);
         if (session.user.email === "efootballtournament11@gmail.com") {
           setIsSuperAdmin(true);
         }
@@ -991,8 +989,8 @@ Match Rules:
 
             {/* Paid Tournament Toggle */}
             <div
-              className={`p-4 rounded-2xl border mb-6 flex items-center justify-between cursor-pointer transition-all duration-300 ${selectedTournament?.isPaid ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-background-dark/50 border-white/5'}`}
-              onClick={() => updateSettings("isPaid", !selectedTournament?.isPaid)}
+              className={`p-4 rounded-2xl border mb-6 flex items-center justify-between transition-all duration-300 ${isSuperAdmin ? 'cursor-pointer' : 'opacity-80 pointer-events-none'} ${selectedTournament?.isPaid ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-background-dark/50 border-white/5'}`}
+              onClick={() => isSuperAdmin && updateSettings("isPaid", !selectedTournament?.isPaid)}
             >
               <div className="flex flex-col">
                 <span className={`text-sm font-bold uppercase tracking-tight italic ${selectedTournament?.isPaid ? 'text-yellow-400' : 'text-white/50'}`}>
@@ -1013,10 +1011,10 @@ Match Rules:
                 <label className="text-[9px] md:text-[11px] font-extrabold text-white/40 uppercase tracking-wider ml-1">Current Live Phase</label>
                 <div className="relative">
                   <select
-                    disabled={!overrideMode}
+                    disabled={!isSuperAdmin || !overrideMode}
                     value={selectedTournament?.activeStage || "registration"}
                     onChange={(e) => updateSettings("activeStage", e.target.value)}
-                    className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-bold rounded-xl md:rounded-2xl text-white p-3 md:p-4 focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer hover:bg-background-dark transition-colors"
+                    className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-bold rounded-xl md:rounded-2xl text-white p-3 md:p-4 focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer hover:bg-background-dark transition-colors disabled:opacity-50"
                   >
                     <option value="registration">Registration</option>
                     <option value="draw">Draw</option>
@@ -1032,10 +1030,10 @@ Match Rules:
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">₹</span>
                   <input
-                    disabled={!overrideMode}
+                    disabled={!isSuperAdmin || !overrideMode}
                     value={selectedTournament?.entryFee || ""}
                     onChange={(e) => updateSettings("entryFee", e.target.value)}
-                    className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-black rounded-xl md:rounded-2xl text-white py-3 md:py-4 pl-8 pr-4 focus:ring-1 focus:ring-primary outline-none"
+                    className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-black rounded-xl md:rounded-2xl text-white py-3 md:py-4 pl-8 pr-4 focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
                     placeholder="0 for Free"
                   />
                 </div>
@@ -1053,10 +1051,10 @@ Match Rules:
                     <div key={key} className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">{emoji}</span>
                       <input
-                        disabled={!overrideMode}
+                        disabled={!isSuperAdmin || !overrideMode}
                         value={(selectedTournament as any)?.[key] || ""}
                         onChange={(e) => updateSettings(key, e.target.value)}
-                        className="w-full bg-background-dark/50 border border-white/5 text-[11px] md:text-sm font-black rounded-xl text-white py-2.5 pl-9 pr-3 focus:ring-1 focus:ring-primary outline-none placeholder-white/10"
+                        className="w-full bg-background-dark/50 border border-white/5 text-[11px] md:text-sm font-black rounded-xl text-white py-2.5 pl-9 pr-3 focus:ring-1 focus:ring-primary outline-none placeholder-white/10 disabled:opacity-50"
                         placeholder="₹0"
                       />
                     </div>
@@ -1067,10 +1065,10 @@ Match Rules:
               <div className="space-y-1 md:space-y-2 text-white/30">
                 <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] ml-1">Payment UPI</label>
                 <input
-                  disabled={!overrideMode}
+                  disabled={!isSuperAdmin || !overrideMode}
                   value={selectedTournament?.paymentNumber || ""}
                   onChange={(e) => updateSettings("paymentNumber", e.target.value)}
-                  className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-bold rounded-xl md:rounded-2xl text-white p-3 md:p-4 focus:ring-1 focus:ring-primary outline-none"
+                  className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-bold rounded-xl md:rounded-2xl text-white p-3 md:p-4 focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
                   placeholder="e.g. 9876543210@upi"
                 />
               </div>
@@ -1086,7 +1084,7 @@ Match Rules:
                 </div>
                 <h3 className="text-[11px] font-extrabold text-white/40 uppercase tracking-wider">Qualification Logic</h3>
               </div>
-              {selectedTournament && (!selectedTournament.format || !selectedTournament.target_qualifiers) && (
+              {isSuperAdmin && selectedTournament && (!selectedTournament.format || !selectedTournament.target_qualifiers) && (
                 <button
                   onClick={async () => {
                     if (!selectedTournament) return;
@@ -1112,9 +1110,10 @@ Match Rules:
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Tournament Format</label>
                 <select
+                  disabled={!isSuperAdmin}
                   value={selectedTournament?.format || "knockout"}
                   onChange={(e) => updateSettings("format", e.target.value)}
-                  className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none"
+                  className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
                 >
                   <option value="knockout">Single Elimination</option>
                   <option value="round_robin">Round Robin</option>
@@ -1127,19 +1126,21 @@ Match Rules:
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Target Total Qualifiers</label>
                     <input
+                      disabled={!isSuperAdmin}
                       type="number"
                       value={selectedTournament?.target_qualifiers || 4}
                       onChange={(e) => updateSettings("target_qualifiers", parseInt(e.target.value))}
-                      className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none"
+                      className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Qualifiers Per Group</label>
                     <input
+                      disabled={!isSuperAdmin}
                       type="number"
                       value={selectedTournament?.qualifiers_per_group || 2}
                       onChange={(e) => updateSettings("qualifiers_per_group", parseInt(e.target.value))}
-                      className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none"
+                      className="w-full bg-background-dark/50 border border-white/5 text-xs font-bold rounded-2xl text-white p-3 focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
                     />
                   </div>
                 </>
@@ -1155,17 +1156,20 @@ Match Rules:
               <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.2em]">Live Rules</h3>
             </div>
             <textarea
+              disabled={!isSuperAdmin}
               value={selectedTournament?.rules || ""}
               onChange={(e) => setSelectedTournament({ ...selectedTournament, rules: e.target.value })}
-              className="w-full bg-background-dark/50 border border-white/5 rounded-2xl text-[13px] text-white/80 p-5 focus:ring-1 focus:ring-secondary outline-none resize-none h-48 leading-relaxed mb-4 scrollbar-hide"
+              className="w-full bg-background-dark/50 border border-white/5 rounded-2xl text-[13px] text-white/80 p-5 focus:ring-1 focus:ring-secondary outline-none resize-none h-48 leading-relaxed mb-4 scrollbar-hide disabled:opacity-50"
               placeholder="Define tournament rules..."
             />
-            <button
-              onClick={() => updateSettings("rules", selectedTournament.rules)}
-              className="w-full py-4 bg-secondary text-white text-[11px] font-extrabold uppercase tracking-wider px-5 py-2.5xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_rgba(239,68,68,0.2)]"
-            >
-              <Save className="w-4 h-4" /> Save Rules Update
-            </button>
+            {isSuperAdmin && (
+              <button
+                onClick={() => updateSettings("rules", selectedTournament.rules)}
+                className="w-full py-4 bg-secondary text-white text-[11px] font-extrabold uppercase tracking-wider px-5 py-2.5xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_10px_20px_rgba(239,68,68,0.2)]"
+              >
+                <Save className="w-4 h-4" /> Save Rules Update
+              </button>
+            )}
           </div>
         </aside>
         {isGeneratingFixtures && (
@@ -1282,6 +1286,8 @@ Match Rules:
                 setManualPlayerData={setManualPlayerData}
                 handleManualAddPlayer={handleManualAddPlayer}
                 updatePlayerStatus={updatePlayerStatus}
+                overrideMode={overrideMode}
+                isSuperAdmin={isSuperAdmin}
               />
             )}
 
@@ -1303,6 +1309,7 @@ Match Rules:
                 updateMatchScore={updateMatchScore}
                 deleteMatch={deleteMatch}
                 updateMatchDetails={updateMatchDetails}
+                isSuperAdmin={isSuperAdmin}
               />
             )}
 
@@ -1313,6 +1320,9 @@ Match Rules:
                 setOverrideMode={setOverrideMode}
                 updatePlayerStats={updatePlayerStats}
                 deletePlayer={deletePlayer}
+                onDeletePlayer={deletePlayer}
+                onEditPlayer={async (id, newName) => { await updatePlayerStats(id, "name", newName); }}
+                isSuperAdmin={isSuperAdmin}
               />
             )}
           </div>

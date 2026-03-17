@@ -18,6 +18,7 @@ interface MatchCenterProps {
   updateMatchScore: (id: string, homeScore: number, awayScore: number) => void;
   deleteMatch: (id: string) => void;
   updateMatchDetails: (id: string, updates: any) => void;
+  isSuperAdmin: boolean;
 }
 
 const MatchCenter: React.FC<MatchCenterProps> = ({
@@ -36,7 +37,8 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
   toggleMatchStatus,
   updateMatchScore,
   deleteMatch,
-  updateMatchDetails
+  updateMatchDetails,
+  isSuperAdmin
 }) => {
   const [editingDetails, setEditingDetails] = useState<Record<string, any>>({});
 
@@ -121,7 +123,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
           </div>
         </div>
         <div className={`flex flex-col md:flex-row items-center gap-2 w-full md:w-auto ${!overrideMode ? 'opacity-50 pointer-events-none' : ''}`}>
-          {matches.length === 0 && approvedPlayers.length > 0 && (
+          {isSuperAdmin && matches.length === 0 && approvedPlayers.length > 0 && (
             <button
               disabled={!overrideMode}
               onClick={generateFixtures}
@@ -130,7 +132,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
               <RefreshCw className="w-3 md:w-3.5 h-3 md:h-3.5" /> Generate Fixtures
             </button>
           )}
-          {matches.length > 0 && (
+          {isSuperAdmin && matches.length > 0 && (
             <button
               disabled={!overrideMode}
               onClick={deleteAllMatches}
@@ -139,7 +141,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
               <Trash2 className="w-3 md:w-3.5 h-3 md:h-3.5" /> Reset
             </button>
           )}
-          {matches.length > 0 && (
+          {isSuperAdmin && matches.length > 0 && (
             <button
               disabled={!overrideMode}
               onClick={() => selectedTournament && reseedStage(selectedTournament.id)}
@@ -148,13 +150,15 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
               <RefreshCw className="w-3 md:w-3.5 h-3 md:h-3.5" /> Reseed
             </button>
           )}
-          <button
-            disabled={!overrideMode}
-            onClick={() => setShowNewMatchForm(!showNewMatchForm)}
-            className="w-full md:w-auto px-4 py-2 bg-primary/20 text-primary border border-primary/20 text-[9px] md:text-[11px] font-extrabold rounded-lg md:rounded-xl uppercase tracking-wider hover:bg-primary/30 flex items-center justify-center gap-2 transition-all active:scale-95"
-          >
-            <Plus className="w-3 md:w-3.5 h-3 md:h-3.5" /> Custom Match
-          </button>
+          {isSuperAdmin && (
+            <button
+              disabled={!overrideMode}
+              onClick={() => setShowNewMatchForm(!showNewMatchForm)}
+              className="w-full md:w-auto px-4 py-2 bg-primary/20 text-primary border border-primary/20 text-[9px] md:text-[11px] font-extrabold rounded-lg md:rounded-xl uppercase tracking-wider hover:bg-primary/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+            >
+              <Plus className="w-3 md:w-3.5 h-3 md:h-3.5" /> Custom Match
+            </button>
+          )}
         </div>
       </header>
 
@@ -206,7 +210,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
                           >
                             {match.status}
                           </button>
-                          {overrideMode && (
+                          {isSuperAdmin && overrideMode && (
                             <button onClick={() => deleteMatch(match.id)} className="p-1 text-white/10 hover:text-red-500 transition-colors">
                               <Trash className="w-3.5 h-3.5" />
                             </button>
