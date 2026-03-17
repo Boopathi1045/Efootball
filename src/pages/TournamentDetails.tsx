@@ -20,8 +20,29 @@ export default function TournamentDetails() {
   const [matches, setMatches] = useState<any[]>([]);
   const [activeStage, setActiveStage] = useState("registration");
   const [activeTab, setActiveTab] = useState("overview");
-
   const [activeTournament, setActiveTournament] = useState<any>(null);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    const currentX = e.targetTouches[0].clientX;
+    const diff = currentX - touchStart;
+
+    // Swipe left to right (diff > 100)
+    if (diff > 100) {
+      navigate('/tournament');
+      setTouchStart(null);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+  };
 
   useEffect(() => {
     const fetchTournament = async () => {
@@ -139,7 +160,12 @@ export default function TournamentDetails() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col custom-scrollbar"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <header className="flex items-center justify-between border-b border-primary/20 px-4 md:px-20 py-4 glass-panel sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <button 
@@ -642,6 +668,7 @@ const MatchNode = ({ match, title, height }: MatchNodeProps) => {
 };
 
 const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers, activeTab }: { matches: any[], tournament: any, playerCount: number, groups: string[], groupedPlayers: Record<string, any[]>, activeTab: string }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
   const isHybrid = tournament?.format?.toLowerCase() === 'hybrid';
   const isKnockoutStarted = tournament?.activeStage === 'knockout' || tournament?.activeStage === 'finished';
 
@@ -769,6 +796,25 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers,
         .transform-style-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
+        
+        @media (max-width: 768px) {
+          .custom-scrollbar {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+          }
+          .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            display: block !important;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(15, 164, 175, 0.3);
+            border-radius: 10px;
+          }
+        }
       `}</style>
       {/* Qualifiers Summary Section */}
       {isHybrid && groups.length > 0 && (
@@ -844,12 +890,13 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers,
 
         <div className="flex items-center" style={{ height: totalHeight }}>
           <div 
-            className="group perspective-1000 w-[280px] h-[380px] relative"
+            className="group perspective-1000 w-[280px] h-[380px] relative cursor-pointer"
             onMouseEnter={() => {
               if (finalMatch.status === 'completed') triggerConfetti();
             }}
+            onClick={() => setIsFlipped(!isFlipped)}
           >
-            <div className="relative w-full h-full transition-all duration-700 transform-style-3d group-hover:rotate-y-180">
+            <div className={`relative w-full h-full transition-all duration-700 transform-style-3d ${isFlipped ? 'rotate-y-180' : 'md:group-hover:rotate-y-180'}`}>
               {/* Front Face */}
               <div className="absolute inset-0 backface-hidden">
                 <div className="relative p-[2px] rounded-[2.5rem] bg-gradient-to-b from-primary via-primary/20 to-transparent shadow-[0_20px_60px_rgba(15,164,175,0.3)] w-full h-full">
@@ -914,7 +961,7 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers,
                         <span className="text-[10px] font-black text-white/60 uppercase tracking-widest italic">Goals</span>
                       </div>
                     </div>
-                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Hover to see match result</p>
+                    <p className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em]">Touch or hover to see match result</p>
                   </div>
                 </div>
               </div>

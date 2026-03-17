@@ -29,4 +29,14 @@
   .ucl-gradient {
     @apply bg-[radial-gradient(circle_at_center,rgba(15,164,175,0.15)_0%,rgba(0,49,53,1)_70%)];
   }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-background-dark;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+  }
 }
