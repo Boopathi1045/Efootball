@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { v4 as uuidv4 } from "uuid";
-import { Trophy, Settings, Users, Check, X, LogOut, Edit3, Save, RefreshCw, Plus, Trash2, Eye, EyeOff, ArrowRightLeft, Dices, CheckCircle2, PlusCircle } from "lucide-react";
+import { Trophy, Settings, Users, Check, X, LogOut, Edit3, Save, RefreshCw, Plus, Trash2, Eye, EyeOff, ArrowRightLeft, Dices, CheckCircle2, PlusCircle, ChevronLeft } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
@@ -840,13 +840,29 @@ Match Rules:
   const pendingPlayers = players.filter(p => p.status === "pending");
   const approvedPlayers = players.filter(p => p.status === "approved");
 
+  const handleBack = () => {
+    if (selectedTournament) {
+      setSelectedTournament(null);
+    } else if (window.history.length <= 1) {
+      navigate('/');
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background-dark text-slate-100">
       {!selectedTournament ? (
         <>
-          <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
+        <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
           <div className="max-w-[1440px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <button 
+                onClick={handleBack}
+                className="p-2 hover:bg-primary/10 rounded-full transition-colors text-slate-400 hover:text-primary"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
               <Trophy className="text-primary w-8 h-8" />
               <h2 className="text-xl font-black tracking-tighter uppercase italic">eFootball Admin</h2>
             </div>
@@ -1005,15 +1021,13 @@ Match Rules:
           <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
         <div className="max-w-[1440px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                setSelectedTournament(null);
-                navigate("/admin");
-              }}
-              className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors"
+            <button 
+              onClick={handleBack}
+              className="p-2 hover:bg-primary/10 rounded-full transition-colors text-slate-400 hover:text-primary"
             >
-              <Trophy className="w-6 h-6 md:w-8 md:h-8" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
+            <Trophy className="text-primary w-8 h-8" />
             <div className="flex flex-col">
               <div className="flex items-center gap-2 group">
                 {isEditingTitle ? (

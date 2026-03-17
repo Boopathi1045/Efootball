@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import { Trophy, RefreshCw, ArrowRightLeft, Play, Shield, Settings, Check } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Trophy, RefreshCw, ArrowRightLeft, Play, Shield, Settings, Check, ChevronLeft } from "lucide-react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function Draw() {
   const { id: urlId } = useParams();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.length <= 1) {
+      navigate('/');
+    } else {
+      navigate(-1);
+    }
+  };
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [players, setPlayers] = useState<any[]>([]);
@@ -153,12 +163,18 @@ export default function Draw() {
     <div className="min-h-screen flex flex-col bg-background-dark text-slate-100 overflow-x-hidden">
       <header className="flex items-center justify-between border-b border-primary/10 px-6 py-4 glass-panel sticky top-0 z-50">
         <div className="flex items-center gap-4">
+          <button 
+            onClick={handleBack}
+            className="p-2 hover:bg-primary/10 rounded-full transition-colors text-background-light/70 hover:text-white"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
           <Trophy className="text-primary w-8 h-8" />
           <h2 className="text-xl font-bold tracking-tight">eFootball <span className="text-primary uppercase italic">{activeTournament?.name || "Pro Draw"}</span></h2>
         </div>
         <div className="flex items-center gap-3 md:gap-4">
           <Link to={`/admin/${encodeURIComponent(activeTournament?.name || '')}`} className="text-[10px] md:text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors uppercase">Admin</Link>
-          <Link to="/" className="text-[10px] md:text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors uppercase">Hub</Link>
+          <Link to="/" className="text-[10px] md:text-sm font-semibold text-background-light/70 hover:text-background-light transition-colors uppercase animate-pulse text-primary">Hub</Link>
         </div>
       </header>
 

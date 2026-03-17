@@ -16,6 +16,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/tournament/:id" element={<TournamentDetails />} />
+        <Route path="/tournament" element={<Home />} />
         <Route path="/register" element={<Registration />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/:id" element={<AdminDashboard />} />

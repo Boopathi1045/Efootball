@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { supabase } from "../supabase";
 import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import confetti from 'canvas-confetti';
 
 export default function TournamentDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.length <= 1) {
+      navigate('/');
+    } else {
+      navigate(-1);
+    }
+  };
   const [rules, setRules] = useState("");
   const [players, setPlayers] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
@@ -133,9 +142,12 @@ export default function TournamentDetails() {
     <div className="min-h-screen flex flex-col">
       <header className="flex items-center justify-between border-b border-primary/20 px-4 md:px-20 py-4 glass-panel sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <Link to="/" className="p-2 hover:bg-primary/10 rounded-full transition-colors text-background-light/70 hover:text-white">
+          <button 
+            onClick={handleBack}
+            className="p-2 hover:bg-primary/10 rounded-full transition-colors text-background-light/70 hover:text-white"
+          >
             <ChevronLeft className="w-6 h-6" />
-          </Link>
+          </button>
           <Trophy className="text-primary w-8 h-8" />
           <h2 className="text-xl font-bold hidden sm:block">{activeTournament?.name || "Tournament Details"}</h2>
         </div>

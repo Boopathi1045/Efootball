@@ -5,6 +5,14 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function Registration() {
   const navigate = useNavigate();
+  const handleBack = () => {
+    if (window.history.length <= 1) {
+      navigate('/');
+    } else {
+      navigate(-1);
+    }
+  };
+
   const [loading, setLoading] = useState(false);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -99,9 +107,12 @@ export default function Registration() {
   return (
     <div className="min-h-screen flex flex-col bg-background-dark">
       <header className="flex items-center p-4 justify-between sticky top-0 z-50 glass-panel">
-        <Link to="/" className="text-primary flex size-10 items-center justify-center cursor-pointer">
+        <button 
+          onClick={handleBack}
+          className="text-primary flex size-10 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors"
+        >
           <ArrowLeft />
-        </Link>
+        </button>
         <h2 className="text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10 uppercase tracking-[0.1em]">
           Tournament Pro
         </h2>
