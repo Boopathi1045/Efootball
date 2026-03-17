@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import TournamentDetails from "./pages/TournamentDetails";
 import Registration from "./pages/Registration";
 import AdminDashboard from "./pages/AdminDashboard";
-import Draw from "./pages/Draw";
 
 export default function App() {
   return (
@@ -20,8 +19,6 @@ export default function App() {
         <Route path="/register" element={<Registration />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/:id" element={<AdminDashboard />} />
-        <Route path="/draw" element={<Draw />} />
-        <Route path="/draw/:id" element={<Draw />} />
       </Routes>
     </Router>
   );

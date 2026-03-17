@@ -1064,9 +1064,6 @@ Match Rules:
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link to={`/draw/${encodeURIComponent(selectedTournament.name)}`} className="px-4 py-2 bg-secondary/10 text-secondary border border-secondary/20 rounded-lg text-sm font-bold hover:bg-secondary/20 transition-all">
-              Live Draw
-            </Link>
             <button onClick={handleLogout} className="p-2 hover:bg-primary/10 rounded-lg text-slate-400 hover:text-primary transition-colors">
               <LogOut className="w-5 h-5" />
             </button>
@@ -1741,16 +1738,6 @@ Match Rules:
                     <div className="text-center space-y-2">
                       <h4 className="text-3xl font-black italic uppercase tracking-tighter text-white">Fixture Matrix</h4>
                       <p className="text-white/40 text-sm">Review pairings. Use the dropdowns for manual interception.</p>
-                      <div className="pt-4">
-                        <a
-                          href={`/draw/${encodeURIComponent(selectedTournament.name)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-2 bg-secondary/20 text-secondary border border-secondary/30 rounded-full text-[11px] font-extrabold uppercase tracking-wider hover:bg-secondary/30 transition-all"
-                        >
-                          <ArrowRightLeft className="w-3.5 h-3.5" /> Open Live Draw Dashboard
-                        </a>
-                      </div>
                     </div>
 
                     {drawnMatchCount < wizardMatches.length && (
