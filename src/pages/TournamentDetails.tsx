@@ -30,14 +30,7 @@ export default function TournamentDetails() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStart) return;
-    const currentX = e.targetTouches[0].clientX;
-    const diff = currentX - touchStart;
-
-    // Swipe left to right (diff > 100)
-    if (diff > 100) {
-      navigate('/tournament');
-      setTouchStart(null);
-    }
+    // Removed sensitive swipe-to-back logic that caused accidental redirects
   };
 
   const handleTouchEnd = () => {
@@ -51,7 +44,17 @@ export default function TournamentDetails() {
 
       if (id) {
         const decodedId = decodeURIComponent(id);
-        const result = await supabase.from('tournaments').select('*').or(`id.eq.${decodedId},name.eq.${decodedId}`);
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const isUuid = uuidRegex.test(decodedId);
+        
+        let query = supabase.from('tournaments').select('*');
+        if (isUuid) {
+          query = query.or(`id.eq.${decodedId},name.eq.${decodedId}`);
+        } else {
+          query = query.eq('name', decodedId);
+        }
+        
+        const result = await query;
         data = result.data;
         error = result.error;
       } else {
@@ -174,8 +177,8 @@ export default function TournamentDetails() {
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <Trophy className="text-primary w-8 h-8" />
-          <h2 className="text-xl font-bold hidden sm:block">{activeTournament?.name || "Tournament Details"}</h2>
+          <Trophy className="text-primary w-6 h-6 md:w-8 md:h-8" />
+          <h2 className="text-sm md:text-xl font-bold hidden sm:block">{activeTournament?.name || "Tournament Details"}</h2>
         </div>
         <div className="flex gap-4">
           <Link to="/register" className="px-4 py-2 bg-secondary text-white rounded-xl font-bold hover:brightness-110 transition-all shadow-[0_0_10px_rgba(150,71,52,0.4)]">
@@ -185,9 +188,9 @@ export default function TournamentDetails() {
       </header>
 
       <main className="flex-1 px-4 md:px-20 py-6 md:py-8 max-w-[1400px] mx-auto w-full space-y-6 md:space-y-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl md:text-4xl font-black leading-tight text-white">{activeTournament?.name || "Loading..."}</h1>
-          <p className="text-primary/70 text-lg font-medium">Pro League | Phase: {activeStage.toUpperCase()}</p>
+        <div className="flex flex-col gap-1 md:gap-2">
+          <h1 className="text-xl md:text-4xl font-black leading-tight text-white">{activeTournament?.name || "Loading..."}</h1>
+          <p className="text-primary/70 text-sm md:text-lg font-medium">Pro League | Phase: {activeStage.toUpperCase()}</p>
         </div>
 
         {/* Tabs */}
@@ -196,13 +199,13 @@ export default function TournamentDetails() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 font-bold text-sm transition-all border-b-2 whitespace-nowrap ${
+              className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2.5 md:py-3 font-bold text-[11px] md:text-sm transition-all border-b-2 whitespace-nowrap ${
                 activeTab === tab.id 
                   ? "border-secondary text-secondary bg-secondary/5" 
                   : "border-transparent text-background-light/70 hover:text-background-light hover:bg-white/5"
               }`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className="w-3.5 h-3.5 md:w-4 md:h-4" />
               {tab.label}
             </button>
           ))}
@@ -517,8 +520,8 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left text-sm border-collapse">
           <thead className="bg-white/5">
-            <tr className="text-white/40 uppercase text-[10px] font-black tracking-[0.15em]">
-              <th className="px-6 py-4 w-12 text-center">#</th>
+            <tr className="text-white/40 uppercase text-[9px] md:text-[10px] font-black tracking-[0.1em] md:tracking-[0.15em]">
+              <th className="px-3 md:px-6 py-3 md:py-4 w-10 md:w-12 text-center">#</th>
               <th className="px-6 py-4">Player</th>
               <th className="px-3 py-4 text-center">MP</th>
               <th className="px-3 py-4 text-center">W</th>
@@ -534,25 +537,25 @@ function GroupTable({ name, players, matches, groupName }: { key?: string | numb
           <tbody className="divide-y divide-white/[0.03]">
             {displayPlayers.map((p, i) => (
               <tr key={p.id} className="group hover:bg-white/[0.02] transition-all duration-300">
-                <td className="px-6 py-5 text-center">
-                  <span className="text-xs font-black text-white/30 group-hover:text-primary transition-colors">{i + 1}</span>
+                <td className="px-3 md:px-6 py-4 md:py-5 text-center">
+                  <span className="text-[10px] md:text-xs font-black text-white/30 group-hover:text-primary transition-colors">{i + 1}</span>
                 </td>
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[10px] font-black text-white/60 uppercase shadow-inner group-hover:border-primary/40 transition-all duration-300">
+                <td className="px-3 md:px-6 py-4 md:py-5">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[9px] md:text-[10px] font-black text-white/60 uppercase shadow-inner group-hover:border-primary/40 transition-all duration-300">
                       {p.name.substring(0,2)}
                     </div>
-                    <span className="font-black text-white italic tracking-tighter text-sm group-hover:text-primary transition-colors truncate max-w-[120px]">{p.name}</span>
+                    <span className="font-black text-white italic tracking-tighter text-[11px] md:text-sm group-hover:text-primary transition-colors truncate max-w-[100px] md:max-w-[120px]">{p.name}</span>
                   </div>
                 </td>
-                <td className="px-3 py-5 text-center font-bold text-white/40">{p.played || 0}</td>
-                <td className="px-3 py-5 text-center text-white/60">{p.wins || 0}</td>
-                <td className="px-3 py-5 text-center text-white/40">{p.draws || 0}</td>
-                <td className="px-3 py-5 text-center text-white/40">{p.losses || 0}</td>
-                 <td className="px-3 py-5 text-center text-white/40">{p.gf || 0}</td>
-                <td className="px-3 py-5 text-center text-white/40">{p.ga || 0}</td>
-                <td className="px-3 py-5 text-center font-bold text-white/40">{p.gd || 0}</td>
-                <td className="px-3 py-5 text-center font-black text-primary text-base tracking-tighter italic">{p.points || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center font-bold text-white/40 text-[11px] md:text-sm">{p.played || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center text-white/60 text-[11px] md:text-sm">{p.wins || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center text-white/40 text-[11px] md:text-sm">{p.draws || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center text-white/40 text-[11px] md:text-sm">{p.losses || 0}</td>
+                 <td className="px-2 md:px-3 py-4 md:py-5 text-center text-white/40 text-[11px] md:text-sm">{p.gf || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center text-white/40 text-[11px] md:text-sm">{p.ga || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center font-bold text-white/40 text-[11px] md:text-sm">{p.gd || 0}</td>
+                <td className="px-2 md:px-3 py-4 md:py-5 text-center font-black text-primary text-sm md:text-base tracking-tighter italic">{p.points || 0}</td>
                 <td className="px-6 py-5">
                   <div className="flex items-center justify-center gap-1">
                     {getPlayerForm(p.id).map((result, idx) => (

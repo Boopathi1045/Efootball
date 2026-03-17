@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, Plus, Eye } from "lucide-react";
+import { Users, Plus, Eye, CheckCircle2, XCircle } from "lucide-react";
 
 interface PlayerManagementProps {
   pendingPlayers: any[];
@@ -9,6 +9,7 @@ interface PlayerManagementProps {
   setManualPlayerData: (data: { name: string; efootballId: string; phone: string }) => void;
   handleManualAddPlayer: (e: React.FormEvent) => void;
   updatePlayerStatus: (id: string, status: string) => void;
+  overrideMode: boolean;
 }
 
 const PlayerManagement: React.FC<PlayerManagementProps> = ({
@@ -18,79 +19,91 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
   manualPlayerData,
   setManualPlayerData,
   handleManualAddPlayer,
-  updatePlayerStatus
+  updatePlayerStatus,
+  overrideMode
 }) => {
   return (
-    <section className="glass-panel rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
-      <div className="p-5 md:p-7 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between bg-white/[0.02] gap-4">
-        <div className="flex items-center gap-4">
+    <section className="glass-panel rounded-[1.5rem] md:rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
+      <header className="p-4 md:p-7 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between bg-white/[0.02] gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Users className="text-primary w-4 h-4 md:w-5 md:h-5" />
           </div>
           <div>
-            <h3 className="text-base md:text-xl font-black text-white italic tracking-tighter uppercase mb-0.5">Player Management</h3>
-            <p className="text-[10px] md:text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{pendingPlayers.length} Pending Approval</p>
+            <h3 className="text-sm md:text-xl font-black text-white italic tracking-tighter uppercase mb-0.5">Player Management</h3>
+            <p className="text-[9px] md:text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{pendingPlayers.length} Pending Approval</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <button onClick={() => setShowManualPlayerForm(true)} className="w-full md:w-auto bg-white/5 text-white font-extrabold uppercase text-[10px] md:text-[11px] tracking-wider px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <button 
+            disabled={!overrideMode}
+            onClick={() => setShowManualPlayerForm(!showManualPlayerForm)} 
+            className="w-full md:w-auto bg-white/5 text-white font-extrabold uppercase text-[9px] md:text-[11px] tracking-wider px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
             <Plus className="w-3.5 h-3.5" /> Manual Entry
           </button>
         </div>
-      </div>
+      </header>
 
-      {showManualPlayerForm && (
-        <form onSubmit={handleManualAddPlayer} className="p-7 bg-primary/[0.03] border-b border-white/5 grid grid-cols-1 md:grid-cols-4 gap-6 items-end animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">Full Name</label>
-            <input required value={manualPlayerData.name} onChange={e => setManualPlayerData({ ...manualPlayerData, name: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-2xl px-5 py-3.5 text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="e.g. Cristiano" />
+      {showManualPlayerForm && overrideMode && (
+        <form onSubmit={handleManualAddPlayer} className="p-4 md:p-7 bg-primary/[0.03] border-b border-white/5 grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 items-end animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex flex-col gap-1.5 md:gap-2">
+            <label className="text-[9px] md:text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">Full Name</label>
+            <input required value={manualPlayerData.name} onChange={e => setManualPlayerData({ ...manualPlayerData, name: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-5 py-2.5 md:py-3.5 text-[12px] md:text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="e.g. Cristiano" />
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">eFootball User ID (Optional)</label>
-            <input value={manualPlayerData.efootballId} onChange={e => setManualPlayerData({ ...manualPlayerData, efootballId: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-2xl px-5 py-3.5 text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="000-000-000" />
+          <div className="flex flex-col gap-1.5 md:gap-2">
+            <label className="text-[9px] md:text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">eFootball ID</label>
+            <input value={manualPlayerData.efootballId} onChange={e => setManualPlayerData({ ...manualPlayerData, efootballId: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-5 py-2.5 md:py-3.5 text-[12px] md:text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="000-000-000" />
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">WhatsApp No. (Optional)</label>
-            <input value={manualPlayerData.phone} onChange={e => setManualPlayerData({ ...manualPlayerData, phone: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-2xl px-5 py-3.5 text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="+91 ..." />
+          <div className="flex flex-col gap-1.5 md:gap-2">
+            <label className="text-[9px] md:text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">WhatsApp</label>
+            <input value={manualPlayerData.phone} onChange={e => setManualPlayerData({ ...manualPlayerData, phone: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-5 py-2.5 md:py-3.5 text-[12px] md:text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="+91 ..." />
           </div>
-          <button type="submit" className="h-[52px] bg-primary text-background-dark font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/10">Add Player to Roster</button>
+          <button type="submit" className="h-[42px] md:h-[52px] bg-primary text-background-dark font-black text-[10px] uppercase tracking-[0.2em] rounded-xl md:rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/10">Add Player</button>
         </form>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left">
-          <thead className="bg-white/[0.02] text-[11px] text-white/40 uppercase tracking-wider">
+          <thead className="bg-white/[0.02] text-[9px] md:text-[11px] text-white/40 uppercase tracking-widest">
             <tr>
-              <th className="px-8 py-5 font-black">Registrant</th>
-              <th className="px-8 py-5 font-black text-center">In-Game ID</th>
-              <th className="px-8 py-5 font-black text-center">Payment Proof</th>
-              <th className="px-8 py-5 font-black text-right">Verification</th>
+              <th className="px-5 md:px-8 py-4 md:py-5 font-black">Registrant</th>
+              <th className="hidden md:table-cell px-8 py-5 font-black text-center">In-Game ID</th>
+              <th className="px-5 md:px-8 py-4 md:py-5 font-black text-center">Payment</th>
+              <th className="px-5 md:px-8 py-4 md:py-5 font-black text-right">Verification</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
             {pendingPlayers.map(player => (
               <tr key={player.id} className="hover:bg-white/[0.02] transition-colors group">
-                <td className="px-8 py-6">
+                <td className="px-5 md:px-8 py-4 md:py-6">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-bold text-white group-hover:text-primary transition-colors">{player.name}</span>
-                    <span className="text-[11px] text-white/30 font-medium">{player.phone}</span>
+                    <span className="text-[12px] md:text-sm font-bold text-white group-hover:text-primary transition-colors">{player.name}</span>
+                    <span className="text-[9px] md:text-[11px] text-white/30 font-medium md:hidden">{player.efootballId}</span>
+                    <span className="text-[9px] md:text-[11px] text-white/30 font-medium">{player.phone}</span>
                   </div>
                 </td>
-                <td className="px-8 py-6 text-center">
+                <td className="hidden md:table-cell px-8 py-6 text-center">
                   <span className="px-3 py-1.5 bg-background-dark/50 border border-white/5 rounded-lg font-mono text-xs text-primary/80">{player.efootballId}</span>
                 </td>
-                <td className="px-8 py-6 text-center">
+                <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                   {player.paymentScreenshotUrl ? (
-                    <a href={player.paymentScreenshotUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-[10px] font-black uppercase text-white/40 hover:text-primary transition-colors bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                      <Eye className="w-3.5 h-3.5" /> View Slip
+                    <a href={player.paymentScreenshotUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[10px] font-black uppercase text-white/40 hover:text-primary transition-colors bg-white/5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-white/5">
+                      <Eye className="w-3 md:w-3.5 h-3 md:h-3.5" /> <span className="hidden sm:inline">View Slip</span>
                     </a>
                   ) : (
-                    <span className="text-[10px] text-white/10 font-black uppercase italic">No Slip</span>
+                    <span className="text-[9px] md:text-[10px] text-white/10 font-black uppercase italic">No Slip</span>
                   )}
                 </td>
-                <td className="px-8 py-6 text-right space-x-2">
-                  <button onClick={() => updatePlayerStatus(player.id, "approved")} className="px-4 py-2 bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/20 border border-primary/20 transition-all">Approve</button>
-                  <button onClick={() => updatePlayerStatus(player.id, "banned")} className="px-4 py-2 bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-secondary/20 border border-secondary/20 transition-all">Reject</button>
+                <td className="px-5 md:px-8 py-4 md:py-6 text-right space-x-1.5 md:space-x-2">
+                  {overrideMode ? (
+                    <>
+                      <button onClick={() => updatePlayerStatus(player.id, "approved")} className="px-2.5 md:px-4 py-1.5 md:py-2 bg-primary/10 text-primary text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-lg md:rounded-xl hover:bg-primary/20 border border-primary/20 transition-all"><CheckCircle2 className="w-3.5 h-3.5 md:hidden" /><span className="hidden md:inline">Approve</span></button>
+                      <button onClick={() => updatePlayerStatus(player.id, "banned")} className="px-2.5 md:px-4 py-1.5 md:py-2 bg-secondary/10 text-secondary text-[9px] md:text-[10px] font-black uppercase tracking-widest rounded-lg md:rounded-xl hover:bg-secondary/20 border border-secondary/20 transition-all"><XCircle className="w-3.5 h-3.5 md:hidden" /><span className="hidden md:inline">Reject</span></button>
+                    </>
+                  ) : (
+                    <span className="text-[9px] font-black uppercase text-white/10 tracking-widest italic">Locked</span>
+                  )}
                 </td>
               </tr>
             ))}

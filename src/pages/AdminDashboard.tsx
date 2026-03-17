@@ -77,7 +77,7 @@ export default function AdminDashboard() {
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
-      if (session?.user?.email === "admin@efootball.com" || session?.user?.email === "rboopathi1045@gmail.com" || session?.user?.email === "efootballtournament11@gmail.com") {
+      if (session?.user?.email && ["admin@efootball.com", "rboopathi1045@gmail.com", "efootballtournament11@gmail.com"].includes(session.user.email)) {
         setIsAdmin(true);
       }
       if (session?.user?.email === "efootballtournament11@gmail.com") {
@@ -92,7 +92,9 @@ export default function AdminDashboard() {
       // For flexibility, any email used to sign up in this dev phase can be considered admin
       // You can restrict this later by specific emails
       if (session?.user) {
-        setIsAdmin(true);
+        if (session.user.email && ["admin@efootball.com", "rboopathi1045@gmail.com", "efootballtournament11@gmail.com"].includes(session.user.email)) {
+          setIsAdmin(true);
+        }
         if (session.user.email === "efootballtournament11@gmail.com") {
           setIsSuperAdmin(true);
         }
@@ -947,9 +949,9 @@ Match Rules:
                     />
                   </div>
                 ) : (
-                  <h2 className="text-xl font-black tracking-tighter uppercase italic flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingTitle(true)}>
+                  <h2 className="text-sm md:text-xl font-black tracking-tighter uppercase italic flex items-center gap-2 group cursor-pointer" onClick={() => overrideMode && setIsEditingTitle(true)}>
                     {selectedTournament?.name}
-                    <Edit3 className="w-4 h-4 text-white/20 group-hover:text-primary transition-colors" />
+                    {overrideMode && <Edit3 className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />}
                   </h2>
                 )}
               </div>
@@ -1005,14 +1007,15 @@ Match Rules:
               </label>
             </div>
 
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-[11px] font-extrabold text-white/40 uppercase tracking-wider ml-1">Current Live Phase</label>
+            <div className={`space-y-4 md:space-y-5 ${!overrideMode ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="space-y-1 md:space-y-2">
+                <label className="text-[9px] md:text-[11px] font-extrabold text-white/40 uppercase tracking-wider ml-1">Current Live Phase</label>
                 <div className="relative">
                   <select
+                    disabled={!overrideMode}
                     value={selectedTournament?.activeStage || "registration"}
                     onChange={(e) => updateSettings("activeStage", e.target.value)}
-                    className="w-full bg-background-dark/50 border border-white/5 text-sm font-bold rounded-2xl text-white p-4 focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer hover:bg-background-dark transition-colors"
+                    className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-bold rounded-xl md:rounded-2xl text-white p-3 md:p-4 focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer hover:bg-background-dark transition-colors"
                   >
                     <option value="registration">Registration</option>
                     <option value="draw">Draw</option>
@@ -1023,45 +1026,50 @@ Match Rules:
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Registration Fee (₹)</label>
+              <div className="space-y-1 md:space-y-2">
+                <label className="text-[9px] md:text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Registration Fee (₹)</label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">₹</span>
                   <input
+                    disabled={!overrideMode}
                     value={selectedTournament?.entryFee || ""}
                     onChange={(e) => updateSettings("entryFee", e.target.value)}
-                    className="w-full bg-background-dark/50 border border-white/5 text-sm font-black rounded-2xl text-white py-4 pl-8 pr-4 focus:ring-1 focus:ring-primary outline-none"
+                    className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-black rounded-xl md:rounded-2xl text-white py-3 md:py-4 pl-8 pr-4 focus:ring-1 focus:ring-primary outline-none"
                     placeholder="0 for Free"
                   />
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (₹) — Fill what applies</label>
-                {[
-                  { key: "prize1st", emoji: "🥇", label: "1st — Winner" },
-                  { key: "prize2nd", emoji: "🥈", label: "2nd — Runner-up" },
-                  { key: "prize3rd", emoji: "🥉", label: "3rd Place" },
-                  { key: "prize4th", emoji: "4️⃣", label: "4th Place" },
-                ].map(({ key, emoji, label }) => (
-                  <div key={key} className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">{emoji}</span>
-                    <input
-                      value={(selectedTournament as any)?.[key] || ""}
-                      onChange={(e) => updateSettings(key, e.target.value)}
-                      className="w-full bg-background-dark/50 border border-white/5 text-sm font-black rounded-2xl text-white py-3 pl-10 pr-4 focus:ring-1 focus:ring-primary outline-none placeholder-white/20"
-                      placeholder={label}
-                    />
-                  </div>
-                ))}
+              <div className="space-y-2 md:space-y-3">
+                <label className="text-[9px] md:text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (₹)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "prize1st", emoji: "🥇" },
+                    { key: "prize2nd", emoji: "🥈" },
+                    { key: "prize3rd", emoji: "🥉" },
+                    { key: "prize4th", emoji: "4️⃣" },
+                  ].map(({ key, emoji }) => (
+                    <div key={key} className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">{emoji}</span>
+                      <input
+                        disabled={!overrideMode}
+                        value={(selectedTournament as any)?.[key] || ""}
+                        onChange={(e) => updateSettings(key, e.target.value)}
+                        className="w-full bg-background-dark/50 border border-white/5 text-[11px] md:text-sm font-black rounded-xl text-white py-2.5 pl-9 pr-3 focus:ring-1 focus:ring-primary outline-none placeholder-white/10"
+                        placeholder="₹0"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-2 text-white/30">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] ml-1">Payment UPI ID / No.</label>
+              <div className="space-y-1 md:space-y-2 text-white/30">
+                <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] ml-1">Payment UPI</label>
                 <input
+                  disabled={!overrideMode}
                   value={selectedTournament?.paymentNumber || ""}
                   onChange={(e) => updateSettings("paymentNumber", e.target.value)}
-                  className="w-full bg-background-dark/50 border border-white/5 text-sm font-bold rounded-2xl text-white p-4 focus:ring-1 focus:ring-primary outline-none"
+                  className="w-full bg-background-dark/50 border border-white/5 text-[12px] md:text-sm font-bold rounded-xl md:rounded-2xl text-white p-3 md:p-4 focus:ring-1 focus:ring-primary outline-none"
                   placeholder="e.g. 9876543210@upi"
                 />
               </div>
