@@ -38,34 +38,55 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
   deleteMatch,
   updateMatchDetails
 }) => {
-  const [editingScores, setEditingScores] = useState<Record<string, { home: number; away: number }>>({});
+  const [editingDetails, setEditingDetails] = useState<Record<string, { homeScore: number; awayScore: number; homeName: string; awayName: string; round: string }>>({});
 
   const toggleEditing = (match: any) => {
     if (!overrideMode) return;
-    if (editingScores[match.id]) {
-      const { [match.id]: _, ...rest } = editingScores;
-      setEditingScores(rest);
+    if (editingDetails[match.id]) {
+      const { [match.id]: _, ...rest } = editingDetails;
+      setEditingDetails(rest);
     } else {
-      setEditingScores({
-        ...editingScores,
-        [match.id]: { home: match.homeScore || 0, away: match.awayScore || 0 }
+      setEditingDetails({
+        ...editingDetails,
+        [match.id]: { 
+          homeScore: match.homeScore || 0, 
+          awayScore: match.awayScore || 0,
+          homeName: match.homePlayerName || "",
+          awayName: match.awayPlayerName || "",
+          round: match.round || ""
+        }
       });
     }
   };
 
-  const handleScoreChange = (matchId: string, side: 'home' | 'away', val: string) => {
-    const num = parseInt(val) || 0;
-    setEditingScores({
-      ...editingScores,
-      [matchId]: { ...editingScores[matchId], [side]: num }
+  const handleEditChange = (matchId: string, field: string, val: string | number) => {
+    setEditingDetails({
+      ...editingDetails,
+      [matchId]: { ...editingDetails[matchId], [field]: val }
     });
   };
 
-  const handleSaveScore = async (matchId: string) => {
-    const scores = editingScores[matchId];
-    await updateMatchScore(matchId, scores.home, scores.away);
-    const { [matchId]: _, ...rest } = editingScores;
-    setEditingScores(rest);
+  const handleSaveDetails = async (matchId: string) => {
+    const details = editingDetails[matchId];
+    if (!details) return;
+
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+
+    if (details.homeScore !== match.homeScore || details.awayScore !== match.awayScore) {
+       await updateMatchScore(matchId, details.homeScore, details.awayScore);
+    }
+
+    if (details.homeName !== match.homePlayerName || details.awayName !== match.awayPlayerName || details.round !== match.round) {
+       await updateMatchDetails(matchId, {
+         homePlayerName: details.homeName,
+         awayPlayerName: details.awayName,
+         round: details.round
+       });
+    }
+
+    const { [matchId]: _, ...rest } = editingDetails;
+    setEditingDetails(rest);
   };
 
   const rounds = Array.from(new Set(matches.map(m => m.round))).filter(Boolean).sort((a, b) => {
@@ -191,24 +212,33 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
 
                       <div className="space-y-3 md:space-y-4">
                         {[
-                          { player: match.homePlayerName, score: match.homeScore, side: 'home' },
-                          { player: match.awayPlayerName, score: match.awayScore, side: 'away' }
+                          { player: match.homePlayerName, score: match.homeScore, side: 'home', nameField: 'homeName', scoreField: 'homeScore' },
+                          { player: match.awayPlayerName, score: match.awayScore, side: 'away', nameField: 'awayName', scoreField: 'awayScore' }
                         ].map((p, i) => (
                           <div key={i} className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                <div className="w-6 h-6 rounded-lg bg-surface-dark flex items-center justify-center border border-white/5 shrink-0">
                                 <span className="text-[10px] font-black text-white/20">{p.player.charAt(0)}</span>
                               </div>
-                              <span className={`text-[11px] md:text-sm font-black italic uppercase truncate ${match.status === 'completed' && match.homeScore !== match.awayScore && ((i === 0 && match.homeScore > match.awayScore) || (i === 1 && match.awayScore > match.homeScore)) ? 'text-primary' : (p.player === 'TBD' ? 'text-white/10' : 'text-white/60')}`}>
-                                {p.player}
-                              </span>
+                              {editingDetails[match.id] ? (
+                                <input
+                                  type="text"
+                                  value={editingDetails[match.id][p.nameField as 'homeName' | 'awayName']}
+                                  onChange={(e) => handleEditChange(match.id, p.nameField, e.target.value)}
+                                  className="w-full bg-primary/10 border border-primary/30 rounded-lg font-black italic uppercase text-primary px-2 py-1 md:py-1.5 text-[11px] md:text-sm focus:ring-1 focus:ring-primary outline-none truncate"
+                                />
+                              ) : (
+                                <span className={`text-[11px] md:text-sm font-black italic uppercase truncate ${match.status === 'completed' && match.homeScore !== match.awayScore && ((i === 0 && match.homeScore > match.awayScore) || (i === 1 && match.awayScore > match.homeScore)) ? 'text-primary' : (p.player === 'TBD' ? 'text-white/10' : 'text-white/60')}`}>
+                                  {p.player}
+                                </span>
+                              )}
                             </div>
-                            {editingScores[match.id] ? (
+                            {editingDetails[match.id] ? (
                               <input
                                 type="number"
-                                value={editingScores[match.id][p.side as 'home' | 'away']}
-                                onChange={(e) => handleScoreChange(match.id, p.side as 'home' | 'away', e.target.value)}
-                                className="w-10 md:w-12 bg-primary/10 border border-primary/30 rounded-lg text-center font-black text-primary py-1 md:py-1.5 text-[12px] md:text-sm focus:ring-1 focus:ring-primary outline-none"
+                                value={editingDetails[match.id][p.scoreField as 'homeScore' | 'awayScore']}
+                                onChange={(e) => handleEditChange(match.id, p.scoreField, parseInt(e.target.value) || 0)}
+                                className="w-10 md:w-12 bg-primary/10 border border-primary/30 rounded-lg text-center font-black text-primary py-1 md:py-1.5 text-[12px] md:text-sm focus:ring-1 focus:ring-primary outline-none appearance-none"
                               />
                             ) : (
                               <span className={`text-sm md:text-lg font-black italic ${match.status === 'completed' ? 'text-white' : 'text-white/20'}`}>
@@ -220,39 +250,20 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
                       </div>
 
                       <div className="mt-4 md:mt-5 flex gap-2">
-                        {editingScores[match.id] ? (
+                        {editingDetails[match.id] ? (
                           <>
-                            <button onClick={() => handleSaveScore(match.id)} className="flex-1 py-2 bg-primary text-background-dark font-black text-[9px] uppercase tracking-widest rounded-xl">Save</button>
-                            <button onClick={() => toggleEditing(match)} className="px-3 bg-white/5 text-white/40 font-black text-[9px] uppercase rounded-xl">X</button>
+                            <button onClick={() => handleSaveDetails(match.id)} className="flex-1 py-1.5 md:py-2 bg-primary text-background-dark font-black text-[9px] md:text-[10px] uppercase tracking-widest rounded-xl md:rounded-2xl transition-all hover:brightness-110">Save</button>
+                            <button onClick={() => toggleEditing(match)} className="px-3 bg-white/5 text-white/40 font-black text-[9px] md:text-[10px] uppercase rounded-xl md:rounded-2xl transition-all hover:bg-white/10 hover:text-white">X</button>
                           </>
                         ) : (
                           <>
                             <button 
                               disabled={!overrideMode}
                               onClick={() => toggleEditing(match)} 
-                              className="flex-1 py-1.5 md:py-2 bg-white/5 hover:bg-white/10 text-white/30 hover:text-white border border-white/5 rounded-xl md:rounded-2xl text-[9px] font-extrabold uppercase tracking-widest transition-all disabled:opacity-20"
+                              className="flex-1 py-1.5 md:py-2 bg-white/5 hover:bg-white/10 text-white/30 hover:text-white border border-white/5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest transition-all disabled:opacity-20 flex items-center justify-center gap-2"
                             >
-                              Update Result
+                              <Edit3 className="w-3 h-3" /> Edit Match
                             </button>
-                            {overrideMode && (
-                              <button 
-                                onClick={() => {
-                                  const newHome = prompt("New Home Name:", match.homePlayerName);
-                                  const newAway = prompt("New Away Name:", match.awayPlayerName);
-                                  const newRound = prompt("New Round Name:", match.round);
-                                  if (newHome || newAway || newRound) {
-                                    updateMatchDetails(match.id, {
-                                      homePlayerName: newHome || match.homePlayerName,
-                                      awayPlayerName: newAway || match.awayPlayerName,
-                                      round: newRound || match.round
-                                    });
-                                  }
-                                }} 
-                                className="px-3 bg-white/5 hover:bg-white/10 text-white/20 hover:text-primary rounded-xl md:rounded-2xl transition-all"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </button>
-                            )}
                           </>
                         )}
                       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { v4 as uuidv4 } from "uuid";
-import { Trophy, Settings, Users, Check, X, LogOut, Edit3, Save, RefreshCw, Plus, Trash2, Eye, EyeOff, ArrowRightLeft, Dices, CheckCircle2, PlusCircle, ChevronLeft } from "lucide-react";
+import { Trophy, Settings, Users, Check, X, LogOut, Edit3, Save, RefreshCw, Plus, Trash2, Eye, EyeOff, ArrowRightLeft, Dices, CheckCircle2, PlusCircle, ChevronLeft, LayoutGrid } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import TournamentList from "../components/admin/TournamentList";
 import FixtureWizard from "../components/admin/FixtureWizard";
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
   const [players, setPlayers] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
   const [overrideMode, setOverrideMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("players");
 
   // Fixture Wizard State
   const [isGeneratingFixtures, setIsGeneratingFixtures] = useState(false);
@@ -1249,45 +1250,71 @@ Match Rules:
         )}
 
         {/* Main Content */}
-        <main className="flex-1 space-y-6">
-          {/* Player Management */}
-          <PlayerManagement 
-            pendingPlayers={pendingPlayers}
-            showManualPlayerForm={showManualPlayerForm}
-            setShowManualPlayerForm={setShowManualPlayerForm}
-            manualPlayerData={manualPlayerData}
-            setManualPlayerData={setManualPlayerData}
-            handleManualAddPlayer={handleManualAddPlayer}
-            updatePlayerStatus={updatePlayerStatus}
-          />
+        <main className="flex-1 flex flex-col min-w-0">
+          <div className="flex overflow-x-auto gap-2 border-b border-white/10 pb-px mb-6 custom-scrollbar">
+            {[
+              { id: "players", label: "Player Management", icon: Users },
+              { id: "matches", label: "Match Center", icon: Trophy },
+              { id: "board", label: "Board Override", icon: LayoutGrid },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center gap-2 px-6 py-4 border-b-2 transition-all min-w-[120px] ${
+                  activeTab === tab.id 
+                    ? "border-primary text-primary bg-primary/5" 
+                    : "border-transparent text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
+                }`}
+              >
+                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-primary' : 'text-white/40'}`} />
+                <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-            <MatchCenter 
-              matches={matches}
-              approvedPlayers={approvedPlayers}
-              selectedTournament={selectedTournament}
-              generateFixtures={generateFixtures}
-              deleteAllMatches={deleteAllMatches}
-              reseedStage={reseedStage}
-              overrideMode={overrideMode}
-              showNewMatchForm={showNewMatchForm}
-              setShowNewMatchForm={setShowNewMatchForm}
-              createCustomMatch={createCustomMatch}
-              newMatchData={newMatchData}
-              setNewMatchData={setNewMatchData}
-              toggleMatchStatus={toggleMatchStatus}
-              updateMatchScore={updateMatchScore}
-              deleteMatch={deleteMatch}
-              updateMatchDetails={updateMatchDetails}
-            />
+          <div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {activeTab === "players" && (
+              <PlayerManagement 
+                pendingPlayers={pendingPlayers}
+                showManualPlayerForm={showManualPlayerForm}
+                setShowManualPlayerForm={setShowManualPlayerForm}
+                manualPlayerData={manualPlayerData}
+                setManualPlayerData={setManualPlayerData}
+                handleManualAddPlayer={handleManualAddPlayer}
+                updatePlayerStatus={updatePlayerStatus}
+              />
+            )}
 
-            <StandingsOverride 
-              approvedPlayers={approvedPlayers}
-              overrideMode={overrideMode}
-              setOverrideMode={setOverrideMode}
-              updatePlayerStats={updatePlayerStats}
-              deletePlayer={deletePlayer}
-            />
+            {activeTab === "matches" && (
+              <MatchCenter 
+                matches={matches}
+                approvedPlayers={approvedPlayers}
+                selectedTournament={selectedTournament}
+                generateFixtures={generateFixtures}
+                deleteAllMatches={deleteAllMatches}
+                reseedStage={reseedStage}
+                overrideMode={overrideMode}
+                showNewMatchForm={showNewMatchForm}
+                setShowNewMatchForm={setShowNewMatchForm}
+                createCustomMatch={createCustomMatch}
+                newMatchData={newMatchData}
+                setNewMatchData={setNewMatchData}
+                toggleMatchStatus={toggleMatchStatus}
+                updateMatchScore={updateMatchScore}
+                deleteMatch={deleteMatch}
+                updateMatchDetails={updateMatchDetails}
+              />
+            )}
+
+            {activeTab === "board" && (
+              <StandingsOverride 
+                approvedPlayers={approvedPlayers}
+                overrideMode={overrideMode}
+                setOverrideMode={setOverrideMode}
+                updatePlayerStats={updatePlayerStats}
+                deletePlayer={deletePlayer}
+              />
+            )}
           </div>
         </main>
       </div>
