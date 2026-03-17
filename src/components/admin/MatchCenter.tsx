@@ -38,32 +38,24 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
   deleteMatch,
   updateMatchDetails
 }) => {
-  const [editingDetails, setEditingDetails] = useState<Record<string, { homeScore: number; awayScore: number; homeName: string; awayName: string; round: string }>>({});
-
-  const toggleEditing = (match: any) => {
-    if (!overrideMode) return;
-    if (editingDetails[match.id]) {
-      const { [match.id]: _, ...rest } = editingDetails;
-      setEditingDetails(rest);
-    } else {
-      setEditingDetails({
-        ...editingDetails,
-        [match.id]: { 
-          homeScore: match.homeScore || 0, 
-          awayScore: match.awayScore || 0,
-          homeName: match.homePlayerName || "",
-          awayName: match.awayPlayerName || "",
-          round: match.round || ""
-        }
-      });
-    }
-  };
+  const [editingDetails, setEditingDetails] = useState<Record<string, any>>({});
 
   const handleEditChange = (matchId: string, field: string, val: string | number) => {
-    setEditingDetails({
-      ...editingDetails,
-      [matchId]: { ...editingDetails[matchId], [field]: val }
-    });
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+    
+    setEditingDetails(prev => ({
+      ...prev,
+      [matchId]: { 
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        homeName: match.homePlayerName,
+        awayName: match.awayPlayerName,
+        round: match.round,
+        ...(prev[matchId] || {}),
+        [field]: val 
+      }
+    }));
   };
 
   const handleSaveDetails = async (matchId: string) => {
@@ -73,15 +65,27 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
     const match = matches.find(m => m.id === matchId);
     if (!match) return;
 
-    if (details.homeScore !== match.homeScore || details.awayScore !== match.awayScore) {
-       await updateMatchScore(matchId, details.homeScore, details.awayScore);
+    const parseScore = (s: any) => {
+      if (s === '' || s === undefined || s === null) return 0;
+      const parsed = parseInt(s);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    const newHomeScore = details.homeScore !== undefined ? parseScore(details.homeScore) : match.homeScore;
+    const newAwayScore = details.awayScore !== undefined ? parseScore(details.awayScore) : match.awayScore;
+    const newHomeName = details.homeName ?? match.homePlayerName;
+    const newAwayName = details.awayName ?? match.awayPlayerName;
+    const newRound = details.round ?? match.round;
+
+    if (newHomeScore !== match.homeScore || newAwayScore !== match.awayScore) {
+       await updateMatchScore(matchId, newHomeScore, newAwayScore);
     }
 
-    if (details.homeName !== match.homePlayerName || details.awayName !== match.awayPlayerName || details.round !== match.round) {
+    if (newHomeName !== match.homePlayerName || newAwayName !== match.awayPlayerName || newRound !== match.round) {
        await updateMatchDetails(matchId, {
-         homePlayerName: details.homeName,
-         awayPlayerName: details.awayName,
-         round: details.round
+         homePlayerName: newHomeName,
+         awayPlayerName: newAwayName,
+         round: newRound
        });
     }
 
@@ -178,7 +182,7 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
         </form>
       )}
 
-      <div className="flex-1 overflow-y-auto max-h-[700px] custom-scrollbar p-3 md:p-6">
+      <div className="p-3 md:p-6">
         <div className="space-y-8 md:space-y-12">
           {rounds.map(round => (
             <div key={round as string} className="space-y-3 md:space-y-5">
@@ -214,58 +218,46 @@ const MatchCenter: React.FC<MatchCenterProps> = ({
                         {[
                           { player: match.homePlayerName, score: match.homeScore, side: 'home', nameField: 'homeName', scoreField: 'homeScore' },
                           { player: match.awayPlayerName, score: match.awayScore, side: 'away', nameField: 'awayName', scoreField: 'awayScore' }
-                        ].map((p, i) => (
+                        ].map((p, i) => {
+                          const isWinner = match.status === 'completed' && match.homeScore !== match.awayScore && ((i === 0 && match.homeScore > match.awayScore) || (i === 1 && match.awayScore > match.homeScore));
+                          const nameVal = editingDetails[match.id]?.[p.nameField as 'homeName' | 'awayName'] ?? p.player;
+                          const scoreVal = editingDetails[match.id]?.[p.scoreField as 'homeScore' | 'awayScore'] ?? p.score ?? 0;
+                          
+                          return (
                           <div key={i} className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                <div className="w-6 h-6 rounded-lg bg-surface-dark flex items-center justify-center border border-white/5 shrink-0">
                                 <span className="text-[10px] font-black text-white/20">{p.player.charAt(0)}</span>
                               </div>
-                              {editingDetails[match.id] ? (
+                              {overrideMode ? (
                                 <input
                                   type="text"
-                                  value={editingDetails[match.id][p.nameField as 'homeName' | 'awayName']}
+                                  value={nameVal}
                                   onChange={(e) => handleEditChange(match.id, p.nameField, e.target.value)}
-                                  className="w-full bg-primary/10 border border-primary/30 rounded-lg font-black italic uppercase text-primary px-2 py-1 md:py-1.5 text-[11px] md:text-sm focus:ring-1 focus:ring-primary outline-none truncate"
+                                  onBlur={() => handleSaveDetails(match.id)}
+                                  className={`w-full bg-transparent hover:bg-white/5 border border-transparent hover:border-white/10 rounded font-black italic uppercase truncate focus:bg-primary/10 focus:border-primary/30 outline-none px-2 py-1 -ml-2 text-[11px] md:text-sm transition-all focus:text-primary ${isWinner ? 'text-primary' : (p.player === 'TBD' ? 'text-white/20' : 'text-white/60')}`}
                                 />
                               ) : (
-                                <span className={`text-[11px] md:text-sm font-black italic uppercase truncate ${match.status === 'completed' && match.homeScore !== match.awayScore && ((i === 0 && match.homeScore > match.awayScore) || (i === 1 && match.awayScore > match.homeScore)) ? 'text-primary' : (p.player === 'TBD' ? 'text-white/10' : 'text-white/60')}`}>
+                                <span className={`text-[11px] md:text-sm font-black italic uppercase truncate ${isWinner ? 'text-primary' : (p.player === 'TBD' ? 'text-white/10' : 'text-white/60')}`}>
                                   {p.player}
                                 </span>
                               )}
                             </div>
-                            {editingDetails[match.id] ? (
+                            {overrideMode ? (
                               <input
                                 type="number"
-                                value={editingDetails[match.id][p.scoreField as 'homeScore' | 'awayScore']}
-                                onChange={(e) => handleEditChange(match.id, p.scoreField, parseInt(e.target.value) || 0)}
-                                className="w-10 md:w-12 bg-primary/10 border border-primary/30 rounded-lg text-center font-black text-primary py-1 md:py-1.5 text-[12px] md:text-sm focus:ring-1 focus:ring-primary outline-none appearance-none"
+                                value={scoreVal}
+                                onChange={(e) => handleEditChange(match.id, p.scoreField, e.target.value === '' ? '' : parseInt(e.target.value))}
+                                onBlur={() => handleSaveDetails(match.id)}
+                                className={`w-12 bg-transparent hover:bg-white/5 border border-transparent hover:border-white/10 rounded text-center font-black py-1 focus:bg-primary/10 focus:border-primary/30 outline-none appearance-none text-sm md:text-lg focus:text-primary transition-all ${match.status === 'completed' ? 'text-white' : 'text-white/20'}`}
                               />
                             ) : (
-                              <span className={`text-sm md:text-lg font-black italic ${match.status === 'completed' ? 'text-white' : 'text-white/20'}`}>
+                              <span className={`text-sm md:text-lg font-black italic ${match.status === 'completed' ? 'text-white' : 'text-white/20'} w-12 text-center`}>
                                 {p.score ?? 0}
                               </span>
                             )}
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-4 md:mt-5 flex gap-2">
-                        {editingDetails[match.id] ? (
-                          <>
-                            <button onClick={() => handleSaveDetails(match.id)} className="flex-1 py-1.5 md:py-2 bg-primary text-background-dark font-black text-[9px] md:text-[10px] uppercase tracking-widest rounded-xl md:rounded-2xl transition-all hover:brightness-110">Save</button>
-                            <button onClick={() => toggleEditing(match)} className="px-3 bg-white/5 text-white/40 font-black text-[9px] md:text-[10px] uppercase rounded-xl md:rounded-2xl transition-all hover:bg-white/10 hover:text-white">X</button>
-                          </>
-                        ) : (
-                          <>
-                            <button 
-                              disabled={!overrideMode}
-                              onClick={() => toggleEditing(match)} 
-                              className="flex-1 py-1.5 md:py-2 bg-white/5 hover:bg-white/10 text-white/30 hover:text-white border border-white/5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest transition-all disabled:opacity-20 flex items-center justify-center gap-2"
-                            >
-                              <Edit3 className="w-3 h-3" /> Edit Match
-                            </button>
-                          </>
-                        )}
+                        )})}
                       </div>
                     </div>
                   </div>
