@@ -8,12 +8,10 @@ import Home from "./pages/Home";
 import TournamentDetails from "./pages/TournamentDetails";
 import Registration from "./pages/Registration";
 import AdminDashboard from "./pages/AdminDashboard";
-import BackButton from "./components/common/BackButton";
 
 export default function App() {
   return (
     <Router>
-      <BackButton />
       <Routes>
         <Route path="/" element={<Navigate to="/tournament" replace />} />
         <Route path="/tournament" element={<Home />} />

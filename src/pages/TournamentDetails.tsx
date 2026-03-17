@@ -22,20 +22,7 @@ export default function TournamentDetails() {
   const [activeTab, setActiveTab] = useState("overview");
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStart) return;
-    // Removed sensitive swipe-to-back logic that caused accidental redirects
-  };
-
-  const handleTouchEnd = () => {
-    setTouchStart(null);
-  };
 
   useEffect(() => {
     const fetchTournament = async () => {
@@ -163,12 +150,7 @@ export default function TournamentDetails() {
   ];
 
   return (
-    <div 
-      className="min-h-screen flex flex-col custom-scrollbar"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="min-h-screen flex flex-col custom-scrollbar">
       <header className="flex items-center justify-between border-b border-primary/20 px-4 md:px-20 py-4 glass-panel sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <button 
