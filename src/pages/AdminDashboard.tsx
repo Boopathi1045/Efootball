@@ -840,10 +840,11 @@ Match Rules:
   const pendingPlayers = players.filter(p => p.status === "pending");
   const approvedPlayers = players.filter(p => p.status === "approved");
 
-  if (!selectedTournament) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background-dark text-slate-100">
-        <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
+  return (
+    <div className="min-h-screen flex flex-col bg-background-dark text-slate-100">
+      {!selectedTournament ? (
+        <>
+          <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
           <div className="max-w-[1440px] mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Trophy className="text-primary w-8 h-8" />
@@ -885,7 +886,10 @@ Match Rules:
                       
                       {isSuperAdmin && (
                         <button
-                          onClick={(e) => deleteTournament(e, t)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            deleteTournament(e, t);
+                          }}
                           className="w-12 h-12 flex items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 hover:scale-105"
                           title="Delete Tournament"
                         >
@@ -993,15 +997,12 @@ Match Rules:
                 </button>
               )}
             </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background-dark text-slate-100">
-      <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
+            </div>
+          </main>
+        </>
+      ) : (
+        <>
+          <header className="sticky top-0 z-50 border-b border-primary/10 bg-background-dark/80 backdrop-blur-md px-6 py-3">
         <div className="max-w-[1440px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -2329,6 +2330,8 @@ Match Rules:
           </div>
         </main>
       </div>
+    </>
+      )}
       {/* Custom Dialog */}
       {dialog.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-300">
