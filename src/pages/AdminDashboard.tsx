@@ -10,6 +10,7 @@ export default function AdminDashboard() {
 
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTournament, setSelectedTournament] = useState<any>(null);
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -70,8 +71,11 @@ export default function AdminDashboard() {
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
-      if (session?.user?.email === "admin@efootball.com" || session?.user?.email === "rboopathi1045@gmail.com") {
+      if (session?.user?.email === "admin@efootball.com" || session?.user?.email === "rboopathi1045@gmail.com" || session?.user?.email === "efootballtournament11@gmail.com") {
         setIsAdmin(true);
+      }
+      if (session?.user?.email === "efootballtournament11@gmail.com") {
+        setIsSuperAdmin(true);
       }
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -83,8 +87,12 @@ export default function AdminDashboard() {
       // You can restrict this later by specific emails
       if (session?.user) {
         setIsAdmin(true);
+        if (session.user.email === "efootballtournament11@gmail.com") {
+          setIsSuperAdmin(true);
+        }
       } else {
         setIsAdmin(false);
+        setIsSuperAdmin(false);
       }
       setLoading(false);
     });
@@ -562,12 +570,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteTournament = async (e: any, id: string) => {
+  const deleteTournament = async (e: any, t: any) => {
     e.stopPropagation();
     showConfirm(
       "Confirm Deletion",
-      "WARNING: Are you sure you want to completely delete this tournament? This cannot be undone.",
+      `WARNING: Are you sure you want to completely delete "${t.name}"? This cannot be undone.`,
       async () => {
+        const id = t.id;
         // Optimistic delete
         setTournaments(prev => prev.filter(t => t.id !== id));
         if (selectedTournament?.id === id) {
@@ -873,7 +882,16 @@ Match Rules:
                       >
                         {t.isHidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
-
+                      
+                      {isSuperAdmin && (
+                        <button
+                          onClick={(e) => deleteTournament(e, t)}
+                          className="w-12 h-12 flex items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 hover:scale-105"
+                          title="Delete Tournament"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
