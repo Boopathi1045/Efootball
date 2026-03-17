@@ -109,11 +109,11 @@ export default function Registration() {
       <header className="flex items-center p-4 justify-between sticky top-0 z-50 glass-panel">
         <button 
           onClick={handleBack}
-          className="text-primary flex size-10 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors"
+          className="text-primary flex size-8 md:size-10 items-center justify-center cursor-pointer hover:bg-primary/10 rounded-full transition-colors"
         >
-          <ArrowLeft />
+          <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
         </button>
-        <h2 className="text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10 uppercase tracking-[0.1em]">
+        <h2 className="text-white text-base md:text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-8 md:pr-10 uppercase tracking-[0.1em]">
           Tournament Pro
         </h2>
       </header>
@@ -127,9 +127,9 @@ export default function Registration() {
           <div className="h-full rounded-full bg-primary neon-glow" style={{ width: "100%" }}></div>
         </div>
 
-        <div className="pt-6 pb-2">
-          <h3 className="text-white tracking-tight text-2xl md:text-3xl font-extrabold leading-tight">{activeTournament.name}</h3>
-          <p className="text-background-light/80 text-sm md:text-base font-normal mt-2">Claim your glory. Complete the registration to secure your bracket position.</p>
+        <div className="pt-4 md:pt-6 pb-2">
+          <h3 className="text-white tracking-tight text-xl md:text-3xl font-extrabold leading-tight">{activeTournament.name}</h3>
+          <p className="text-background-light/80 text-xs md:text-base font-normal mt-1 md:mt-2">Claim your glory. Complete the registration to secure your bracket position.</p>
         </div>
 
         {activeTournament.activeStage === 'registration' ? (
@@ -157,43 +157,43 @@ export default function Registration() {
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5 py-4 mb-20 text-left">
-              <div className="flex flex-col gap-2">
-                <label className="text-background-light text-sm font-semibold ml-1">Full Name</label>
+              <div className="flex flex-col gap-1.5 md:gap-2">
+                <label className="text-background-light text-xs md:text-sm font-semibold ml-1">Full Name</label>
                 <div className="relative">
-                  <PersonStanding className="absolute left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-5 h-5" />
+                  <PersonStanding className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-4 h-4 md:w-5 md:h-5" />
                   <input 
                     required
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
-                    className="w-full pl-12 pr-4 h-14 bg-primary/5 border border-primary/20 rounded-xl text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
+                    className="w-full pl-10 md:pl-12 pr-4 h-12 md:h-14 bg-primary/5 border border-primary/20 rounded-xl text-white text-sm md:text-base focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
                     placeholder="Ex: John Doe" 
                     type="text"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-background-light text-sm font-semibold ml-1">WhatsApp Number (Optional)</label>
+              <div className="flex flex-col gap-1.5 md:gap-2">
+                <label className="text-background-light text-xs md:text-sm font-semibold ml-1">WhatsApp Number (Optional)</label>
                 <div className="relative">
-                  <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-5 h-5" />
+                  <MessageCircle className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-4 h-4 md:w-5 md:h-5" />
                   <input 
                     value={formData.phone}
                     onChange={e => setFormData({...formData, phone: e.target.value})}
-                    className="w-full pl-12 pr-4 h-14 bg-primary/5 border border-primary/20 rounded-xl text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
+                    className="w-full pl-10 md:pl-12 pr-4 h-12 md:h-14 bg-primary/5 border border-primary/20 rounded-xl text-white text-sm md:text-base focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
                     placeholder="+91 ..." 
                     type="tel"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-background-light text-sm font-semibold ml-1">eFootball Unique ID (Optional)</label>
+              <div className="flex flex-col gap-1.5 md:gap-2">
+                <label className="text-background-light text-xs md:text-sm font-semibold ml-1">eFootball Unique ID (Optional)</label>
                 <div className="relative">
-                  <Gamepad2 className="absolute left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-5 h-5" />
+                  <Gamepad2 className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-background-light/50 w-4 h-4 md:w-5 md:h-5" />
                   <input 
                     value={formData.efootballId}
                     onChange={e => setFormData({...formData, efootballId: e.target.value})}
-                    className="w-full pl-12 pr-4 h-14 bg-primary/5 border border-primary/20 rounded-xl text-white focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
+                    className="w-full pl-10 md:pl-12 pr-4 h-12 md:h-14 bg-primary/5 border border-primary/20 rounded-xl text-white text-sm md:text-base focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all" 
                     placeholder="123-456-789" 
                     type="text"
                   />
@@ -221,7 +221,7 @@ export default function Registration() {
               <div className="mt-4">
                 <button 
                   disabled={loading}
-                  className="w-full h-14 bg-secondary text-white font-black text-lg rounded-xl flex items-center justify-center gap-3 drop-shadow-[0_0_15px_rgba(150,71,52,0.4)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 border border-secondary/50" 
+                  className="w-full h-12 md:h-14 bg-secondary text-white font-black text-base md:text-lg rounded-xl flex items-center justify-center gap-3 drop-shadow-[0_0_15px_rgba(150,71,52,0.4)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 border border-secondary/50" 
                   type="submit"
                 >
                   {loading ? "SUBMITTING..." : "SUBMIT REGISTRATION"}

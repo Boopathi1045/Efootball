@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { supabase } from "../supabase";
-import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown } from "lucide-react";
+import { Trophy, Info, Users, Shield, Calendar, ChevronLeft, LayoutGrid, List, CheckCircle2, XCircle, MinusCircle, ChevronDown, Search } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import confetti from 'canvas-confetti';
 
@@ -22,6 +22,7 @@ export default function TournamentDetails() {
   const [activeTab, setActiveTab] = useState("overview");
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [fixtureSearch, setFixtureSearch] = useState("");
 
 
   useEffect(() => {
@@ -163,7 +164,7 @@ export default function TournamentDetails() {
           <h2 className="text-sm md:text-xl font-bold hidden sm:block">{activeTournament?.name || "Tournament Details"}</h2>
         </div>
         <div className="flex gap-4">
-          <Link to="/register" className="px-4 py-2 bg-secondary text-white rounded-xl font-bold hover:brightness-110 transition-all shadow-[0_0_10px_rgba(150,71,52,0.4)]">
+          <Link to="/register" className="px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-secondary text-white rounded-xl font-bold hover:brightness-110 transition-all shadow-[0_0_10px_rgba(150,71,52,0.4)]">
             Register Now
           </Link>
         </div>
@@ -209,20 +210,20 @@ export default function TournamentDetails() {
 
                   return (
                     <div className="rounded-2xl border border-yellow-500/20 overflow-hidden">
-                      <div className="flex items-center gap-3 px-5 py-4 bg-yellow-500/10 border-b border-yellow-500/20">
-                        <Trophy className="w-5 h-5 text-yellow-400" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.25em] text-yellow-400">Prize Pool</span>
+                      <div className="flex items-center gap-2 md:gap-3 px-4 py-3 md:px-5 md:py-4 bg-yellow-500/10 border-b border-yellow-500/20">
+                        <Trophy className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
+                        <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.25em] text-yellow-400">Prize Pool</span>
                       </div>
                       <div className="divide-y divide-white/5 bg-background-dark/60">
                         {tiers.length > 0 ? tiers.map(({ key, emoji, label, color, border, bg }) => (
-                          <div key={key} className="flex items-center justify-between px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-9 h-9 rounded-xl ${bg} border ${border} flex items-center justify-center text-base shrink-0`}>
+                          <div key={key} className="flex items-center justify-between px-4 py-3 md:px-5 md:py-4">
+                            <div className="flex items-center gap-2 md:gap-3">
+                              <div className={`w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl ${bg} border ${border} flex items-center justify-center text-sm md:text-base shrink-0`}>
                                 {emoji}
                               </div>
-                              <span className="text-sm font-bold text-white/70">{label}</span>
+                              <span className="text-xs md:text-sm font-bold text-white/70">{label}</span>
                             </div>
-                            <span className={`text-xl font-black italic ${color}`}>
+                            <span className={`text-lg md:text-xl font-black italic ${color}`}>
                               ₹{(activeTournament as any)[key]}
                             </span>
                           </div>
@@ -232,12 +233,12 @@ export default function TournamentDetails() {
                             { emoji: "🥇", label: "Winner" },
                             { emoji: "🥈", label: "Runner-up" },
                           ].map(({ emoji, label }) => (
-                            <div key={label} className="flex items-center justify-between px-5 py-4 opacity-40">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">{emoji}</div>
-                                <span className="text-sm font-bold text-white/50">{label}</span>
+                            <div key={label} className="flex items-center justify-between px-4 py-3 md:px-5 md:py-4 opacity-40">
+                              <div className="flex items-center gap-2 md:gap-3">
+                                <div className="w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-sm md:text-base shrink-0">{emoji}</div>
+                                <span className="text-xs md:text-sm font-bold text-white/50">{label}</span>
                               </div>
-                              <span className="text-sm font-black italic text-white/30">TBA</span>
+                              <span className="text-xs md:text-sm font-black italic text-white/30">TBA</span>
                             </div>
                           ))
                         )}
@@ -247,11 +248,11 @@ export default function TournamentDetails() {
                 })()
               ) : (
                 // FREE: no entry, no prize
-                <div className="flex items-center gap-3 px-5 py-4 rounded-2xl border border-white/5 bg-white/[0.02]">
-                  <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">🆓</div>
+                <div className="flex items-center gap-2 md:gap-3 px-4 py-3 md:px-5 md:py-4 rounded-2xl border border-white/5 bg-white/[0.02]">
+                  <div className="w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-sm md:text-base shrink-0">🆓</div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-black text-white/60 uppercase tracking-wide">No Entry · No Prize</span>
-                    <span className="text-[11px] text-white/30 font-bold">This is a free tournament</span>
+                    <span className="text-xs md:text-sm font-black text-white/60 uppercase tracking-wide">No Entry · No Prize</span>
+                    <span className="text-[10px] md:text-[11px] text-white/30 font-bold">This is a free tournament</span>
                   </div>
                 </div>
               )}
@@ -259,14 +260,14 @@ export default function TournamentDetails() {
 
               {/* Rules / Instructions */}
               <div className="p-1 rounded-xl bg-gradient-to-r from-primary/50 via-primary to-primary/50 neon-glow">
-                <div className="flex flex-col md:flex-row bg-background-dark p-6 rounded-lg gap-8">
+                <div className="flex flex-col md:flex-row bg-background-dark p-4 md:p-6 rounded-lg gap-4 md:gap-8">
                   <div className="w-full md:w-1/3 aspect-video bg-surface-dark rounded-lg flex items-center justify-center border border-primary/20">
-                    <Trophy className="w-24 h-24 text-primary/30" />
+                    <Trophy className="w-16 h-16 md:w-24 md:h-24 text-primary/30" />
                   </div>
-                  <div className="flex-1 flex flex-col justify-center gap-4">
+                  <div className="flex-1 flex flex-col justify-center gap-3 md:gap-4">
                     <div className="flex items-center gap-2">
-                      <Info className="text-primary w-6 h-6" />
-                      <p className="text-xl font-bold">Tournament Instructions</p>
+                      <Info className="text-primary w-5 h-5 md:w-6 md:h-6" />
+                      <p className="text-lg md:text-xl font-bold">Tournament Instructions</p>
                     </div>
                     <div className="whitespace-pre-wrap text-background-light/80 text-sm p-4 bg-primary/5 rounded-lg border border-primary/10">
                       {rules || "Rules will be updated soon."}
@@ -375,15 +376,57 @@ export default function TournamentDetails() {
                   <p>Fixtures will be generated soon.</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-8">
-                  {Object.entries(
-                    matches.reduce((acc: Record<string, any[]>, m) => {
-                      const r = m.round || "Unassigned";
-                      if (!acc[r]) acc[r] = [];
-                      acc[r].push(m);
-                      return acc;
-                    }, {})
-                  ).sort(([a], [b]) => {
+                <div className="flex flex-col gap-6 md:gap-8">
+                  {/* Player Filter Dropdown */}
+                  <div className="flex items-center justify-end w-full">
+                    <div className="relative w-full md:w-64 max-w-sm">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-background-light/50 w-4 h-4 pointer-events-none" />
+                      <select
+                        value={fixtureSearch}
+                        onChange={(e) => setFixtureSearch(e.target.value)}
+                        className={`w-full pl-9 ${fixtureSearch ? 'pr-20' : 'pr-8'} h-10 bg-primary/5 border border-primary/20 rounded-lg text-white text-xs md:text-sm focus:ring-1 focus:ring-primary/50 focus:border-primary outline-none transition-all appearance-none cursor-pointer hover:bg-primary/10`}
+                      >
+                        <option value="" className="bg-background-dark text-white">All Players</option>
+                        {[...players].sort((a,b) => a.name.localeCompare(b.name)).map(p => (
+                          <option key={p.id} value={p.name} className="bg-background-dark text-white">{p.name}</option>
+                        ))}
+                      </select>
+                      
+                      {fixtureSearch && (
+                        <button 
+                          onClick={() => setFixtureSearch("")}
+                          className="absolute right-8 top-1/2 -translate-y-1/2 text-background-light/50 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+                          title="Clear Filter"
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-background-light/50 border-l border-white/10 pl-2">
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {matches.filter(m => {
+                    if (!fixtureSearch.trim()) return true;
+                    return (m.homePlayerName === fixtureSearch) || (m.awayPlayerName === fixtureSearch);
+                  }).length === 0 ? (
+                    <div className="glass-panel p-8 rounded-xl text-center text-background-light/50 font-bold border border-primary/20">
+                      No matches found for "{fixtureSearch}"
+                    </div>
+                  ) : (
+                    Object.entries(
+                      matches.filter(m => {
+                        if (!fixtureSearch.trim()) return true;
+                        return (m.homePlayerName === fixtureSearch) || (m.awayPlayerName === fixtureSearch);
+                      }).reduce((acc: Record<string, any[]>, m) => {
+                        const r = m.round || "Unassigned";
+                        if (!acc[r]) acc[r] = [];
+                        acc[r].push(m);
+                        return acc;
+                      }, {})
+                    ).sort(([a], [b]) => {
                     const priority = (s: string) => {
                       const lower = s.toLowerCase();
                       if (lower.includes('round of 16') || lower.includes('r16') || lower === 'round 1' || lower === 'knockout') return 1;
@@ -405,10 +448,10 @@ export default function TournamentDetails() {
                               {/* Background Glow */}
                               <div className="absolute inset-0 bg-primary/5 blur-xl group-hover/match:bg-primary/10 transition-all opacity-0 group-hover/match:opacity-100" />
                               
-                              <div className="relative glass-panel rounded-2xl border border-white/5 group-hover/match:border-primary/20 transition-all p-4 md:p-6 flex flex-col md:flex-row items-center gap-6 overflow-hidden">
+                              <div className="relative glass-panel rounded-2xl border border-white/5 group-hover/match:border-primary/20 transition-all p-3 md:p-6 flex flex-col md:flex-row items-center gap-4 md:gap-6 overflow-hidden">
                                 {/* Match Info Badge */}
-                                <div className="flex items-center gap-3 w-full md:w-32 shrink-0">
-                                  <div className="w-10 h-10 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center text-[10px] font-black text-white/20 group-hover/match:text-primary/40 group-hover/match:border-primary/20 transition-colors">
+                                <div className="flex items-center gap-2 md:gap-3 w-full md:w-32 shrink-0">
+                                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/[0.03] border border-white/5 flex items-center justify-center text-[9px] md:text-[10px] font-black text-white/20 group-hover/match:text-primary/40 group-hover/match:border-primary/20 transition-colors">
                                     #{match.matchIndex || idx + 1}
                                   </div>
                                   <div className="flex flex-col">
@@ -422,34 +465,34 @@ export default function TournamentDetails() {
                                 {/* Match Core */}
                                 <div className="flex-1 flex items-center justify-center gap-4 md:gap-12 w-full">
                                   {/* Home Player */}
-                                  <div className="flex-1 flex items-center justify-end gap-4 min-w-0">
-                                    <span className={`text-sm md:text-lg font-black italic uppercase tracking-tighter truncate text-right ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
+                                  <div className="flex-1 flex items-center justify-end gap-3 md:gap-4 min-w-0">
+                                    <span className={`text-xs md:text-lg font-black italic uppercase tracking-tighter truncate text-right ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-white' : 'text-white/40'}`}>
                                       {match.homePlayerName}
                                     </span>
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 shrink-0">
+                                    <div className="w-6 h-6 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[8px] md:text-[10px] font-black text-white/40 shrink-0">
                                       {match.homePlayerName.charAt(0)}
                                     </div>
                                   </div>
 
                                   {/* Score Capsule */}
                                   <div className="shrink-0 flex flex-col items-center gap-1">
-                                    <div className="px-6 py-2 bg-background-dark/80 rounded-2xl border border-white/5 flex items-center gap-4 shadow-2xl group-hover/match:border-primary/30 transition-all">
-                                      <span className={`text-xl font-black italic ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-primary' : 'text-white'}`}>
+                                    <div className="px-3 py-1.5 md:px-6 md:py-2 bg-background-dark/80 rounded-xl md:rounded-2xl border border-white/5 flex items-center gap-2 md:gap-4 shadow-2xl group-hover/match:border-primary/30 transition-all">
+                                      <span className={`text-base md:text-xl font-black italic ${match.status === 'completed' && match.homeScore > match.awayScore ? 'text-primary' : 'text-white'}`}>
                                         {match.status === 'completed' ? (match.homeScore ?? 0) : 0}
                                       </span>
-                                      <span className="text-white/10 text-xs font-black italic">VS</span>
-                                      <span className={`text-xl font-black italic ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-primary' : 'text-white'}`}>
+                                      <span className="text-white/10 text-[10px] md:text-xs font-black italic">VS</span>
+                                      <span className={`text-base md:text-xl font-black italic ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-primary' : 'text-white'}`}>
                                         {match.status === 'completed' ? (match.awayScore ?? 0) : 0}
                                       </span>
                                     </div>
                                   </div>
 
                                   {/* Away Player */}
-                                  <div className="flex-1 flex items-center justify-start gap-4 min-w-0">
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 shrink-0">
+                                  <div className="flex-1 flex items-center justify-start gap-3 md:gap-4 min-w-0">
+                                    <div className="w-6 h-6 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-white/10 to-transparent border border-white/10 flex items-center justify-center text-[8px] md:text-[10px] font-black text-white/40 shrink-0">
                                       {match.awayPlayerName.charAt(0)}
                                     </div>
-                                    <span className={`text-sm md:text-lg font-black italic uppercase tracking-tighter truncate text-left ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
+                                    <span className={`text-xs md:text-lg font-black italic uppercase tracking-tighter truncate text-left ${match.status === 'completed' && match.awayScore > match.homeScore ? 'text-white' : 'text-white/40'}`}>
                                       {match.awayPlayerName}
                                     </span>
                                   </div>
@@ -459,7 +502,7 @@ export default function TournamentDetails() {
                           ))}
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               )}
             </section>
