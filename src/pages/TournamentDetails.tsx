@@ -317,10 +317,7 @@ export default function TournamentDetails() {
                 </div>
               ) : (
                 <div className="space-y-8">
-                  <div 
-                    className="grid gap-8"
-                    style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}
-                  >
+                  <div className="flex flex-col gap-8">
                     {groups.length > 0 ? (
                       groups.map((grp: string) => (
                         <GroupTable 
@@ -373,7 +370,7 @@ export default function TournamentDetails() {
                       if (lower.startsWith('group')) return 0;
                       return 99;
                     };
-                    return priority(a) - priority(b);
+                    return priority(a) - priority(b) || a.localeCompare(b);
                   }).map(([roundName, roundMatches]) => (
                     <div key={roundName} className="space-y-4">
                       <h3 className="text-xl font-black italic uppercase tracking-widest text-primary border-b border-primary/20 pb-2">
@@ -637,10 +634,9 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers,
   const isKnockoutStarted = tournament?.activeStage === 'knockout' || tournament?.activeStage === 'finished';
 
   // 1. Determine Starting Round (Strictly Knockout)
-  const hybridStartingRound = groups.length <= 2 ? 'SF' : groups.length <= 4 ? 'QF' : 'R16';
   const targetQuals = tournament?.target_qualifiers || (playerCount > 8 ? 16 : 8);
   const knockoutStartingRound = targetQuals <= 4 ? 'SF' : targetQuals <= 8 ? 'QF' : 'R16';
-  const startRound = isHybrid && groups.length > 0 ? hybridStartingRound : knockoutStartingRound;
+  const startRound = (isHybrid && groups.length > 0) ? knockoutStartingRound : knockoutStartingRound;
 
   const r16MatchesRaw = matches.filter(m => 
     m.round === "Round 1" || 
@@ -766,7 +762,8 @@ const BracketView = ({ matches, tournament, playerCount, groups, groupedPlayers,
       {isHybrid && groups.length > 0 && (
         <div className="flex flex-wrap gap-4 px-4 md:px-0">
           {groups.map((g) => {
-            const topPlayers = (groupedPlayers[g] || []).slice(0, 2);
+            const qualsPerGroup = tournament?.qualifiers_per_group || (tournament?.target_qualifiers ? Math.max(1, Math.ceil(tournament.target_qualifiers / (groups.length || 1))) : 2);
+            const topPlayers = (groupedPlayers[g] || []).slice(0, qualsPerGroup);
             return (
               <div key={g} className="bg-white/5 border border-white/10 rounded-2xl p-4 min-w-[180px] flex-1 backdrop-blur-sm">
                 <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest mb-3">Group {g} Top Players</p>

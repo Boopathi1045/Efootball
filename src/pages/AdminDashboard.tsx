@@ -817,7 +817,7 @@ Match Rules:
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full h-12 px-4 bg-background-dark border border-primary/20 rounded-lg text-white focus:ring-1 focus:ring-secondary outline-none"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
             />
           </div>
           <button type="submit" className="w-full mt-2 px-6 py-3 bg-secondary text-white font-bold rounded-lg hover:brightness-110 transition-all shadow-[0_0_15px_rgba(150,71,52,0.4)]">
@@ -1070,10 +1070,10 @@ Match Rules:
             >
               <div className="flex flex-col">
                 <span className={`text-sm font-bold uppercase tracking-tight italic ${selectedTournament?.isPaid ? 'text-yellow-400' : 'text-white/50'}`}>
-                  {selectedTournament?.isPaid ? "ðŸ’° Paid Tournament" : "ðŸ†“ Free Tournament"}
+                  {selectedTournament?.isPaid ? "💰 Paid Tournament" : "🆓 Free Tournament"}
                 </span>
                 <span className="text-[11px] text-white/30 font-extrabold uppercase tracking-tight">
-                  {selectedTournament?.isPaid ? "Entry fee required â€” prizes shown" : "No entry, no prize shown"}
+                  {selectedTournament?.isPaid ? "Entry fee required — prizes shown" : "No entry, no prize shown"}
                 </span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer pointer-events-none">
@@ -1101,9 +1101,9 @@ Match Rules:
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Registration Fee (â‚¹)</label>
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1">Registration Fee (₹)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">â‚¹</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary font-black">₹</span>
                   <input
                     value={selectedTournament?.entryFee || ""}
                     onChange={(e) => updateSettings("entryFee", e.target.value)}
@@ -1114,12 +1114,12 @@ Match Rules:
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (â‚¹) â€” Fill what applies</label>
+                <label className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] ml-1">Prize Pool (₹) — Fill what applies</label>
                 {[
-                  { key: "prize1st", emoji: "ðŸ¥‡", label: "1st â€” Winner" },
-                  { key: "prize2nd", emoji: "ðŸ¥ˆ", label: "2nd â€” Runner-up" },
-                  { key: "prize3rd", emoji: "ðŸ¥‰", label: "3rd Place" },
-                  { key: "prize4th", emoji: "4ï¸âƒ£", label: "4th Place" },
+                  { key: "prize1st", emoji: "🥇", label: "1st — Winner" },
+                  { key: "prize2nd", emoji: "🥈", label: "2nd — Runner-up" },
+                  { key: "prize3rd", emoji: "🥉", label: "3rd Place" },
+                  { key: "prize4th", emoji: "4️⃣", label: "4th Place" },
                 ].map(({ key, emoji, label }) => (
                   <div key={key} className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none">{emoji}</span>
