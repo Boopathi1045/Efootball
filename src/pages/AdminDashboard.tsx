@@ -81,7 +81,7 @@ export default function AdminDashboard() {
       if (session?.user) {
         setIsAdmin(true);
       }
-      if (session?.user?.email === "efootballtournament11@gmail.com") {
+      if (session?.user?.email?.toLowerCase() === "efootballtournament11@gmail.com") {
         setIsSuperAdmin(true);
       }
       setLoading(false);
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
       // You can restrict this later by specific emails
       if (session?.user) {
         setIsAdmin(true);
-        if (session.user.email === "efootballtournament11@gmail.com") {
+        if (session.user.email?.toLowerCase() === "efootballtournament11@gmail.com") {
           setIsSuperAdmin(true);
         }
       } else {
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
     setLoginError("");
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
       if (error) throw error;
