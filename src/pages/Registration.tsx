@@ -142,12 +142,29 @@ export default function Registration() {
                     <div className="w-full">
                       <h4 className="text-primary font-bold text-sm uppercase">Payment Instructions</h4>
                       <p className="text-background-light text-xs mt-1 leading-relaxed">
-                        Transfer <b className="text-primary">₹{activeTournament.entryFee} Entry Fee</b> to the official tournament number/UPI: <b className="text-primary">{activeTournament.paymentNumber || "Not set"}</b>. Take a screenshot of the confirmation to upload below.
+                        Transfer <b className="text-primary">₹{activeTournament.entryFee} Entry Fee</b> to the official tournament number/UPI: <b className="text-primary">{activeTournament.paymentNumber || "Not set"}</b>
+                        {activeTournament.paymentNumber && activeTournament.paymentNumber.includes('@') && (
+                          <a 
+                            href={`upi://pay?pa=${activeTournament.paymentNumber}&pn=${encodeURIComponent(activeTournament.name)}&am=${activeTournament.entryFee}&cu=INR`}
+                            className="ml-2 inline-flex items-center gap-1 bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider hover:bg-green-500/30 transition-colors"
+                          >
+                            Pay Now 💸
+                          </a>
+                        )}
+                        . Take a screenshot of the confirmation to upload below.
                       </p>
                       {activeTournament.paymentQrUrl && (
                         <div className="mt-4 flex flex-col items-center bg-background-dark p-4 rounded-lg border border-primary/20">
                           <p className="text-xs text-background-light/70 mb-2 uppercase tracking-widest font-bold">Scan to Pay</p>
                           <img src={activeTournament.paymentQrUrl} alt="Payment QR" className="w-40 h-40 object-contain rounded-lg bg-white p-2" />
+                          {activeTournament.paymentNumber && activeTournament.paymentNumber.includes('@') && (
+                            <a 
+                              href={`upi://pay?pa=${activeTournament.paymentNumber}&pn=${encodeURIComponent(activeTournament.name)}&am=${activeTournament.entryFee}&cu=INR`}
+                              className="mt-3 w-full max-w-[160px] text-center bg-green-500 text-white px-3 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_5px_15px_rgba(34,197,94,0.3)] block md:hidden"
+                            >
+                              Open Payment App
+                            </a>
+                          )}
                         </div>
                       )}
                     </div>
