@@ -242,10 +242,44 @@ export default function AdminDashboard() {
   };
 
   const recalculateStandings = async (tournamentId: string) => {
-    const { error } = await supabase.rpc('recalculate_tournament_standings', { t_id: tournamentId });
-    if (error) {
-      console.error("RPC recalculateStandings error:", error);
-      // Fallback or alert if RPC fails
+    try {
+      // Fetch all players to update
+      const { data: allPlayers } = await supabase.from('players').select('id').eq('tournamentId', tournamentId);
+      if (!allPlayers) return;
+
+      // Fetch all completed matches to calculate stats
+      const { data: allMatches } = await supabase.from('matches').select('*').eq('tournamentId', tournamentId).eq('status', 'completed');
+      if (!allMatches) return;
+
+      for (const player of allPlayers) {
+        let played = 0, wins = 0, draws = 0, losses = 0, gf = 0, ga = 0, points = 0;
+
+        const playerMatches = allMatches.filter(m => m.homePlayerId === player.id || m.awayPlayerId === player.id);
+        
+        playerMatches.forEach(m => {
+          played++;
+          if (m.homePlayerId === player.id) {
+            gf += m.homeScore || 0;
+            ga += m.awayScore || 0;
+            if (m.homeScore > m.awayScore) { wins++; points += 3; }
+            else if (m.homeScore === m.awayScore) { draws++; points += 1; }
+            else { losses++; }
+          } else {
+            gf += m.awayScore || 0;
+            ga += m.homeScore || 0;
+            if (m.awayScore > m.homeScore) { wins++; points += 3; }
+            else if (m.homeScore === m.awayScore) { draws++; points += 1; }
+            else { losses++; }
+          }
+        });
+
+        // Update each player row accurately
+        await supabase.from('players').update({
+          played, wins, draws, losses, gf, ga, gd: gf - ga, points
+        }).eq('id', player.id);
+      }
+    } catch (e) {
+      console.error("Local recalculateStandings error:", e);
     }
   };
 
