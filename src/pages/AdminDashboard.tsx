@@ -149,7 +149,7 @@ export default function AdminDashboard() {
     const fetchScopedData = async () => {
       const { data: pData } = await supabase
         .from('players')
-        .select('id, name, efootballId, phone, status, group, points, gd, played, wins, draws, losses, seed, tournamentId')
+        .select('id, name, efootballId, phone, status, group, points, gd, played, wins, draws, losses, seed, tournamentId, "paymentScreenshotUrl"')
         .eq('"tournamentId"', selectedTournament.id);
       if (pData) setPlayers(pData);
 

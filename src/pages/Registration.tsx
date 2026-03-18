@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import { ArrowLeft, Info, PersonStanding, MessageCircle, Gamepad2, UploadCloud } from "lucide-react";
+import { ArrowLeft, Info, PersonStanding, MessageCircle, Gamepad2, UploadCloud, X, CheckCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Registration() {
@@ -21,6 +21,8 @@ export default function Registration() {
     efootballId: "",
   });
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFullScreenshot, setShowFullScreenshot] = useState(false);
 
   useEffect(() => {
     // Fetch the most recently created tournament to show registration rules for it
@@ -60,7 +62,7 @@ export default function Registration() {
         {
           ...formData,
           "tournamentId": activeTournament.id,
-          "paymentScreenshotUrl": "https://via.placeholder.com/150?text=Payment+Proof", // Placeholder
+          "paymentScreenshotUrl": screenshotPreview || null,
           status: "pending",
           "group": "None",
           points: 0,
@@ -75,8 +77,7 @@ export default function Registration() {
 
       if (insertError) throw insertError;
 
-      alert("Registration submitted successfully! Waiting for admin approval.");
-      navigate("/");
+      setShowSuccessModal(true);
     } catch (error) {
       console.error("Error registering:", error);
       alert("Failed to register: " + (error as any).message);
@@ -203,18 +204,56 @@ export default function Registration() {
               {!isFreeTournament && (
                 <div className="flex flex-col gap-2">
                   <label className="text-background-light text-sm font-semibold ml-1">Payment Screenshot</label>
-                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-primary/30 rounded-xl bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors overflow-hidden relative">
-                    {screenshotPreview ? (
-                      <img src={screenshotPreview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <UploadCloud className="w-10 h-10 text-primary mb-2" />
-                        <p className="text-sm text-background-light/80">Tap to upload proof of payment</p>
-                        <p className="text-xs text-background-light/50 mt-1">PNG, JPG or PDF (MAX. 5MB)</p>
+                  
+                  <input 
+                    id="screenshot-upload"
+                    type="file" 
+                    required={!screenshotPreview} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleFileChange} 
+                  />
+
+                  {screenshotPreview ? (
+                    <div className="relative w-full h-40 border-2 border-primary/30 rounded-xl overflow-hidden bg-black/40 flex items-center justify-center group">
+                      <img 
+                        src={screenshotPreview} 
+                        alt="Preview" 
+                        className="w-full h-full object-contain cursor-pointer opacity-90 group-hover:opacity-100 transition-opacity" 
+                        onClick={() => setShowFullScreenshot(true)}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setScreenshotPreview(null);
+                          const fileInput = document.getElementById('screenshot-upload') as HTMLInputElement;
+                          if (fileInput) fileInput.value = '';
+                        }}
+                        className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-sm transition-all shadow-lg z-10"
+                        title="Remove screenshot"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-medium backdrop-blur-md">
+                          Click to view full image
+                        </div>
                       </div>
-                    )}
-                    <input type="file" required className="hidden" accept="image/*" onChange={handleFileChange} />
-                  </label>
+                    </div>
+                  ) : (
+                    <label 
+                      htmlFor="screenshot-upload"
+                      className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-primary/30 rounded-xl bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6 gap-2">
+                        <UploadCloud className="w-10 h-10 text-primary" />
+                        <div className="text-center">
+                          <p className="text-sm text-background-light font-medium">Tap to upload proof of payment</p>
+                          <p className="text-xs text-background-light/50 mt-1">PNG, JPG or PDF (MAX. 5MB)</p>
+                        </div>
+                      </div>
+                    </label>
+                  )}
                 </div>
               )}
 
@@ -249,6 +288,48 @@ export default function Registration() {
           </div>
         )}
       </div>
+
+      {/* Full Screenshot Modal */}
+      {showFullScreenshot && screenshotPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <button 
+            type="button"
+            onClick={() => setShowFullScreenshot(false)}
+            className="absolute top-4 right-4 text-white hover:text-primary bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all cursor-pointer z-50"
+          >
+            <X className="w-8 h-8 md:w-10 md:h-10" />
+          </button>
+          <img 
+            src={screenshotPreview} 
+            alt="Full Preview" 
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl relative z-40"
+          />
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-background-dark border border-primary/30 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-[0_0_40px_rgba(0,255,170,0.15)] flex flex-col items-center text-center animate-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4 neon-glow">
+              <CheckCircle className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-xl md:text-2xl font-bold text-white mb-2 uppercase tracking-tight">Registration Submitted</h3>
+            <p className="text-background-light/80 text-sm mb-6">
+              Your registration has been submitted successfully! Waiting for admin approval.
+            </p>
+            <button
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate("/");
+              }}
+              className="w-full h-12 bg-primary text-background-dark font-black text-base md:text-lg rounded-xl flex items-center justify-center hover:bg-primary/90 active:scale-[0.98] transition-all uppercase tracking-widest"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

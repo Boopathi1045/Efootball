@@ -1,5 +1,5 @@
-import React from "react";
-import { Users, Plus, Eye, CheckCircle2, XCircle } from "lucide-react";
+import React, { useState } from "react";
+import { Users, Plus, Eye, CheckCircle2, XCircle, X } from "lucide-react";
 
 interface PlayerManagementProps {
   pendingPlayers: any[];
@@ -24,8 +24,11 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
   overrideMode,
   isSuperAdmin
 }) => {
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+
   return (
-    <section className="glass-panel rounded-[1.5rem] md:rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
+    <>
+      <section className="glass-panel rounded-[1.5rem] md:rounded-[2rem] overflow-hidden flex flex-col border border-white/5 bg-white/[0.01] backdrop-blur-xl">
       <header className="p-4 md:p-7 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between bg-white/[0.02] gap-4">
         <div className="flex items-center gap-3 md:gap-4">
           <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -90,9 +93,12 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
                 </td>
                 <td className="px-5 md:px-8 py-4 md:py-6 text-center">
                   {player.paymentScreenshotUrl ? (
-                    <a href={player.paymentScreenshotUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[10px] font-black uppercase text-white/40 hover:text-primary transition-colors bg-white/5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-white/5">
+                    <button 
+                      onClick={() => setSelectedScreenshot(player.paymentScreenshotUrl)}
+                      className="inline-flex items-center gap-1.5 md:gap-2 text-[8px] md:text-[10px] font-black uppercase text-white/40 hover:text-primary transition-colors bg-white/5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg border border-white/5"
+                    >
                       <Eye className="w-3 md:w-3.5 h-3 md:h-3.5" /> <span className="hidden sm:inline">View Slip</span>
-                    </a>
+                    </button>
                   ) : (
                     <span className="text-[9px] md:text-[10px] text-white/10 font-black uppercase italic">No Slip</span>
                   )}
@@ -116,6 +122,24 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
         </table>
       </div>
     </section>
+      
+      {/* Full Screenshot Modal */}
+      {selectedScreenshot && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <button 
+            onClick={() => setSelectedScreenshot(null)}
+            className="absolute top-4 right-4 text-white hover:text-primary bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all cursor-pointer z-50"
+          >
+            <X className="w-8 h-8 md:w-10 md:h-10" />
+          </button>
+          <img 
+            src={selectedScreenshot} 
+            alt="Payment Slip Full Preview" 
+            className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl relative z-40"
+          />
+        </div>
+      )}
+    </>
   );
 };
 
