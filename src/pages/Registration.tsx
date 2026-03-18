@@ -104,6 +104,11 @@ export default function Registration() {
     return <div className="min-h-screen flex items-center justify-center bg-background-dark text-white">Loading tournament...</div>;
   }
 
+  const safeUpiId = activeTournament.paymentNumber?.trim() || "";
+  const safeAmount = activeTournament.entryFee ? parseFloat(activeTournament.entryFee).toFixed(2) : "0.00";
+  const safeName = encodeURIComponent(activeTournament.name || "Tournament Entry");
+  const upiDeepLink = `upi://pay?pa=${safeUpiId}&pn=${safeName}&am=${safeAmount}&cu=INR`;
+
   return (
     <div className="min-h-screen flex flex-col bg-background-dark">
       <header className="flex items-center p-4 justify-between sticky top-0 z-50 glass-panel">
@@ -145,7 +150,7 @@ export default function Registration() {
                         Transfer <b className="text-primary">₹{activeTournament.entryFee} Entry Fee</b> to the official tournament number/UPI: <b className="text-primary">{activeTournament.paymentNumber || "Not set"}</b>
                         {activeTournament.paymentNumber && activeTournament.paymentNumber.includes('@') && (
                           <a 
-                            href={`upi://pay?pa=${activeTournament.paymentNumber}&pn=${encodeURIComponent(activeTournament.name)}&am=${activeTournament.entryFee}&cu=INR`}
+                            href={upiDeepLink}
                             className="ml-2 inline-flex items-center gap-1 bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider hover:bg-green-500/30 transition-colors"
                           >
                             Pay Now 💸
@@ -159,7 +164,7 @@ export default function Registration() {
                           <img src={activeTournament.paymentQrUrl} alt="Payment QR" className="w-40 h-40 object-contain rounded-lg bg-white p-2" />
                           {activeTournament.paymentNumber && activeTournament.paymentNumber.includes('@') && (
                             <a 
-                              href={`upi://pay?pa=${activeTournament.paymentNumber}&pn=${encodeURIComponent(activeTournament.name)}&am=${activeTournament.entryFee}&cu=INR`}
+                              href={upiDeepLink}
                               className="mt-3 w-full max-w-[160px] text-center bg-green-500 text-white px-3 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_5px_15px_rgba(34,197,94,0.3)] block md:hidden"
                             >
                               Open Payment App
