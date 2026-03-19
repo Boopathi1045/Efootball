@@ -292,18 +292,18 @@ export default function TournamentDetails() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm table-fixed">
                     <colgroup>
-                      <col style={{ width: "25%" }} />
-                      <col style={{ width: "20%" }} />
-                      <col style={{ width: "25%" }} />
-                      <col style={{ width: "10%" }} />
-                      <col style={{ width: "10%" }} />
-                      <col style={{ width: "10%" }} />
+                      <col className="w-[40%] md:w-[25%]" />
+                      <col className="hidden md:table-column md:w-[20%]" />
+                      <col className="hidden md:table-column md:w-[25%]" />
+                      <col className="w-[20%] md:w-[10%]" />
+                      <col className="w-[20%] md:w-[10%]" />
+                      <col className="w-[20%] md:w-[10%]" />
                     </colgroup>
                     <thead className="bg-primary/5 text-background-light/70 uppercase text-xs font-bold">
                       <tr>
                         <th className="px-6 py-3">Player Name</th>
-                        <th className="px-6 py-3">WhatsApp</th>
-                        <th className="px-6 py-3">eFootball ID</th>
+                        <th className="px-6 py-3 hidden md:table-cell">WhatsApp</th>
+                        <th className="px-6 py-3 hidden md:table-cell">eFootball ID</th>
                         <th className="px-6 py-3 text-center">GF</th>
                         <th className="px-6 py-3 text-center">GA</th>
                         <th className="px-6 py-3 text-center">GD</th>
@@ -313,8 +313,8 @@ export default function TournamentDetails() {
                       {[...players].sort((a, b) => (b.gf || 0) - (a.gf || 0)).map((p) => (
                         <tr key={p.id} className="hover:bg-primary/5">
                           <td className="px-6 py-3 font-bold text-white truncate">{p.name}</td>
-                          <td className="px-6 py-3 text-background-light/80 text-xs truncate">{p.phone || "N/A"}</td>
-                          <td className="px-6 py-3 text-background-light/50 font-mono text-[10px] truncate">{p.efootballId || "—"}</td>
+                          <td className="px-6 py-3 text-background-light/80 text-xs truncate hidden md:table-cell">{p.phone || "N/A"}</td>
+                          <td className="px-6 py-3 text-background-light/50 font-mono text-[10px] truncate hidden md:table-cell">{p.efootballId || "—"}</td>
                           <td className="px-6 py-3 text-center font-bold text-primary">{p.gf || 0}</td>
                           <td className="px-6 py-3 text-center font-bold text-red-400">{p.ga || 0}</td>
                           <td className="px-6 py-3 text-center font-black italic text-white/40">{p.gd || 0}</td>
