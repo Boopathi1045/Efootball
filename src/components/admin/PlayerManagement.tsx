@@ -3,11 +3,6 @@ import { Users, Plus, Eye, CheckCircle2, XCircle, X } from "lucide-react";
 
 interface PlayerManagementProps {
   pendingPlayers: any[];
-  showManualPlayerForm: boolean;
-  setShowManualPlayerForm: (val: boolean) => void;
-  manualPlayerData: { name: string; efootballId: string; phone: string };
-  setManualPlayerData: (data: { name: string; efootballId: string; phone: string }) => void;
-  handleManualAddPlayer: (e: React.FormEvent) => void;
   updatePlayerStatus: (id: string, status: string) => void;
   overrideMode: boolean;
   isSuperAdmin: boolean;
@@ -15,11 +10,6 @@ interface PlayerManagementProps {
 
 const PlayerManagement: React.FC<PlayerManagementProps> = ({
   pendingPlayers,
-  showManualPlayerForm,
-  setShowManualPlayerForm,
-  manualPlayerData,
-  setManualPlayerData,
-  handleManualAddPlayer,
   updatePlayerStatus,
   overrideMode,
   isSuperAdmin
@@ -39,34 +29,7 @@ const PlayerManagement: React.FC<PlayerManagementProps> = ({
             <p className="text-[9px] md:text-[11px] text-white/30 font-extrabold uppercase tracking-wider">{pendingPlayers.length} Pending Approval</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button 
-            disabled={!overrideMode}
-            onClick={() => setShowManualPlayerForm(!showManualPlayerForm)} 
-            className="w-full md:w-auto bg-white/5 text-white font-extrabold uppercase text-[9px] md:text-[11px] tracking-wider px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <Plus className="w-3.5 h-3.5" /> Manual Entry
-          </button>
-        </div>
       </header>
-
-      {showManualPlayerForm && overrideMode && (
-        <form onSubmit={handleManualAddPlayer} className="p-4 md:p-7 bg-primary/[0.03] border-b border-white/5 grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 items-end animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex flex-col gap-1.5 md:gap-2">
-            <label className="text-[9px] md:text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">Full Name</label>
-            <input required value={manualPlayerData.name} onChange={e => setManualPlayerData({ ...manualPlayerData, name: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-5 py-2.5 md:py-3.5 text-[12px] md:text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="e.g. Cristiano" />
-          </div>
-          <div className="flex flex-col gap-1.5 md:gap-2">
-            <label className="text-[9px] md:text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">eFootball ID</label>
-            <input value={manualPlayerData.efootballId} onChange={e => setManualPlayerData({ ...manualPlayerData, efootballId: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-5 py-2.5 md:py-3.5 text-[12px] md:text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="000-000-000" />
-          </div>
-          <div className="flex flex-col gap-1.5 md:gap-2">
-            <label className="text-[9px] md:text-[10px] text-white/30 uppercase font-black tracking-[0.2em] ml-1">WhatsApp</label>
-            <input value={manualPlayerData.phone} onChange={e => setManualPlayerData({ ...manualPlayerData, phone: e.target.value })} className="bg-background-dark/80 border border-white/5 rounded-xl md:rounded-2xl px-4 md:px-5 py-2.5 md:py-3.5 text-[12px] md:text-sm text-white font-bold focus:border-primary/50 outline-none" placeholder="+91 ..." />
-          </div>
-          <button type="submit" className="h-[42px] md:h-[52px] bg-primary text-background-dark font-black text-[10px] uppercase tracking-[0.2em] rounded-xl md:rounded-2xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/10">Add Player</button>
-        </form>
-      )}
 
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left">

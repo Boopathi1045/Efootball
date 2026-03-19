@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { v4 as uuidv4 } from "uuid";
-import { Trophy, Settings, Users, Check, X, LogOut, Edit3, Save, RefreshCw, Plus, Trash2, Eye, EyeOff, ArrowRightLeft, Dices, CheckCircle2, PlusCircle, ChevronLeft, LayoutGrid } from "lucide-react";
+import { Trophy, Settings, Users, Check, X, LogOut, Edit3, Save, RefreshCw, Plus, Trash2, Eye, EyeOff, ArrowRightLeft, Dices, CheckCircle2, PlusCircle, ChevronLeft, LayoutGrid, Globe } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import TournamentList from "../components/admin/TournamentList";
 import FixtureWizard from "../components/admin/FixtureWizard";
 import PlayerManagement from "../components/admin/PlayerManagement";
 import MatchCenter from "../components/admin/MatchCenter";
 import StandingsOverride from "../components/admin/StandingsOverride";
+import PlayerDirectory from "../components/admin/PlayerDirectory";
 import confetti from "canvas-confetti";
 
 export default function AdminDashboard() {
@@ -463,6 +464,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const updatePlayerDetails = async (id: string, updates: any) => {
+    // Optimistic update
+    setPlayers(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+
+    const { error } = await supabase.from('players').update(updates).eq('id', id);
+    if (error) {
+      console.error("Update player details error:", error);
+      showAlert("Update Error", "Failed to update player details: " + error.message);
+    }
+  };
+
   const deletePlayer = async (id: string) => {
     showConfirm(
       "Confirm Deletion",
@@ -520,7 +532,7 @@ export default function AdminDashboard() {
     // 1. Fetch ALL current matches
     const { data: allMatches, error: fetchError } = await supabase.from('matches').select('*').eq('tournamentId', tournamentId);
     if (fetchError || !allMatches || allMatches.length === 0) {
-      alert("No matches found to re-seed.");
+      showAlert("Note", "No matches found to re-seed.");
       return;
     }
 
@@ -943,6 +955,7 @@ Match Rules:
           isSuperAdmin={isSuperAdmin}
           navigate={navigate}
           supabase={supabase}
+          showAlert={showAlert}
         />
       ) : (
         <>
@@ -1131,7 +1144,7 @@ Match Rules:
                     const { error } = await supabase.from('tournaments').update(updates).eq('id', selectedTournament.id);
                     if (!error) {
                       setSelectedTournament({ ...selectedTournament, ...updates });
-                      alert("Tournament metadata initialized!");
+                      showAlert("Success", "Tournament metadata initialized!");
                     }
                   }}
                   className="px-3 py-1.5 bg-orange-500/20 text-orange-500 border border-orange-500/20 text-[9px] font-black uppercase rounded-lg hover:bg-orange-500/30 transition-all hover:scale-105 active:scale-95"
@@ -1251,7 +1264,7 @@ Match Rules:
               
               const { error: matchesError } = await supabase.from('matches').insert(wizardMatches);
               if (matchesError) {
-                alert("Failed to deploy fixtures: " + matchesError.message);
+                showAlert("Error", "Failed to deploy fixtures: " + matchesError.message);
                 setIsLaunching(false);
                 return;
               }
@@ -1295,6 +1308,7 @@ Match Rules:
               { id: "players", label: "Player Management", icon: Users },
               { id: "matches", label: "Match Center", icon: Trophy },
               { id: "board", label: "Board Override", icon: LayoutGrid },
+              { id: "directory", label: "Player Directory", icon: Globe },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1315,11 +1329,6 @@ Match Rules:
             {activeTab === "players" && (
               <PlayerManagement 
                 pendingPlayers={pendingPlayers}
-                showManualPlayerForm={showManualPlayerForm}
-                setShowManualPlayerForm={setShowManualPlayerForm}
-                manualPlayerData={manualPlayerData}
-                setManualPlayerData={setManualPlayerData}
-                handleManualAddPlayer={handleManualAddPlayer}
                 updatePlayerStatus={updatePlayerStatus}
                 overrideMode={overrideMode}
                 isSuperAdmin={isSuperAdmin}
@@ -1352,12 +1361,18 @@ Match Rules:
               <StandingsOverride 
                 approvedPlayers={approvedPlayers}
                 overrideMode={overrideMode}
-                setOverrideMode={setOverrideMode}
-                updatePlayerStats={updatePlayerStats}
-                deletePlayer={deletePlayer}
                 onDeletePlayer={deletePlayer}
-                onEditPlayer={async (id, newName) => { await updatePlayerStats(id, "name", newName); }}
+                onEditPlayerDetails={updatePlayerDetails}
                 isSuperAdmin={isSuperAdmin}
+              />
+            )}
+
+            {activeTab === "directory" && (
+              <PlayerDirectory 
+                tournaments={tournaments}
+                isSuperAdmin={isSuperAdmin}
+                supabase={supabase}
+                showAlert={showAlert}
               />
             )}
           </div>

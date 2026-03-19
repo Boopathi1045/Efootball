@@ -19,6 +19,7 @@ interface TournamentListProps {
   isSuperAdmin: boolean;
   navigate: (path: string) => void;
   supabase: any;
+  showAlert: (title: string, message: string) => void;
 }
 
 const TournamentList: React.FC<TournamentListProps> = ({
@@ -37,7 +38,8 @@ const TournamentList: React.FC<TournamentListProps> = ({
   createTournament,
   isSuperAdmin,
   navigate,
-  supabase
+  supabase,
+  showAlert
 }) => {
   return (
     <>
@@ -114,7 +116,7 @@ const TournamentList: React.FC<TournamentListProps> = ({
                           const newStage = e.target.value;
                           setTournaments(prev => prev.map(item => item.id === t.id ? { ...item, activeStage: newStage } : item));
                           const { error } = await supabase.from('tournaments').update({ activeStage: newStage }).eq('id', t.id);
-                          if (error) alert("Failed to change stage: " + error.message);
+                          if (error) showAlert("Error", "Failed to change stage: " + error.message);
                         }}
                         className="w-full bg-background-dark/80 backdrop-blur-md border border-white/5 rounded-xl md:rounded-2xl px-3 md:px-5 h-10 md:h-[52px] text-[10px] md:text-xs font-black uppercase tracking-widest text-white outline-none focus:border-primary/40 appearance-none cursor-pointer hover:bg-background-dark transition-colors"
                       >

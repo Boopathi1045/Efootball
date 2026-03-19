@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import { ArrowLeft, Info, PersonStanding, MessageCircle, Gamepad2, UploadCloud, X, CheckCircle } from "lucide-react";
+import { ArrowLeft, Info, PersonStanding, MessageCircle, Gamepad2, UploadCloud, X, CheckCircle, AlertTriangle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 export default function Registration() {
@@ -25,6 +25,15 @@ export default function Registration() {
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showFullScreenshot, setShowFullScreenshot] = useState(false);
+  const [dialog, setDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({ isOpen: false, title: '', message: '' });
+
+  const showAlert = (title: string, message: string) => {
+    setDialog({ isOpen: true, title, message });
+  };
 
   useEffect(() => {
     // Fetch all active tournaments and determine the active one
@@ -89,7 +98,7 @@ export default function Registration() {
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Error registering:", error);
-      alert("Failed to register: " + (error as any).message);
+      showAlert("Registration Failed", (error as any).message);
     } finally {
       setLoading(false);
     }
@@ -363,6 +372,29 @@ export default function Registration() {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Dialog */}
+      {dialog.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-sm glass-panel p-8 rounded-[2.5rem] border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-16 h-16 rounded-3xl flex items-center justify-center bg-primary/20 text-primary">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">{dialog.title}</h3>
+                <p className="text-white/40 text-sm font-medium leading-relaxed">{dialog.message}</p>
+              </div>
+              <button
+                onClick={() => setDialog({ ...dialog, isOpen: false })}
+                className="w-full px-6 py-4 font-black uppercase text-[10px] tracking-widest rounded-2xl transition-all bg-primary text-background-dark hover:brightness-110 shadow-lg shadow-primary/10"
+              >
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}
