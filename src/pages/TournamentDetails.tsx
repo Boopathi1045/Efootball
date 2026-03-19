@@ -164,7 +164,7 @@ export default function TournamentDetails() {
           <h2 className="text-sm md:text-xl font-bold hidden sm:block">{activeTournament?.name || "Tournament Details"}</h2>
         </div>
         <div className="flex gap-4">
-          <Link to="/register" className="px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-secondary text-white rounded-xl font-bold hover:brightness-110 transition-all shadow-[0_0_10px_rgba(150,71,52,0.4)]">
+          <Link to={`/register/${activeTournament?.id || ''}`} className="px-3 py-1.5 md:px-4 md:py-2 text-sm md:text-base bg-secondary text-white rounded-xl font-bold hover:brightness-110 transition-all shadow-[0_0_10px_rgba(150,71,52,0.4)]">
             Register Now
           </Link>
         </div>

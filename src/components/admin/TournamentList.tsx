@@ -122,6 +122,7 @@ const TournamentList: React.FC<TournamentListProps> = ({
                         <option value="draw">Draw</option>
                         <option value="groups">Group Stage</option>
                         <option value="knockout">Knockout</option>
+                        <option value="finished">Done</option>
                       </select>
                       <div className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 pointer-events-none text-background-light/30">
                         <Settings className="w-3 h-3" />

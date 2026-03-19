@@ -1054,6 +1054,7 @@ Match Rules:
                     <option value="draw">Draw</option>
                     <option value="groups">Group Stage</option>
                     <option value="knockout">Knockout Stage</option>
+                    <option value="finished">Done</option>
                   </select>
                   <ArrowRightLeft className="w-3.5 h-3.5 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/20 rotate-90" />
                 </div>

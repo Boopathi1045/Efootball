@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
 import { ArrowLeft, Info, PersonStanding, MessageCircle, Gamepad2, UploadCloud, X, CheckCircle } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 export default function Registration() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const handleBack = () => {
     if (window.history.length <= 1) {
       navigate('/');
@@ -15,6 +16,7 @@ export default function Registration() {
 
   const [loading, setLoading] = useState(false);
   const [activeTournament, setActiveTournament] = useState<any>(null);
+  const [tournaments, setTournaments] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     phone: "+91 ",
@@ -25,8 +27,8 @@ export default function Registration() {
   const [showFullScreenshot, setShowFullScreenshot] = useState(false);
 
   useEffect(() => {
-    // Fetch the most recently created tournament to show registration rules for it
-    const fetchTournament = async () => {
+    // Fetch all active tournaments and determine the active one
+    const fetchTournaments = async () => {
       const { data, error } = await supabase
         .from('tournaments')
         .select('*')
@@ -34,21 +36,28 @@ export default function Registration() {
         .order('"createdAt"', { ascending: false });
 
       if (data && data.length > 0) {
-        setActiveTournament(data[0]);
+        setTournaments(data);
+        if (id) {
+          const matched = data.find(t => t.id === id);
+          if (matched) setActiveTournament(matched);
+          else setActiveTournament(data[0]);
+        } else {
+          setActiveTournament(data[0]);
+        }
       }
     };
 
-    fetchTournament();
+    fetchTournaments();
     
     // Subscribe to tournament changes
     const channel = supabase.channel('registration_tournaments')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, fetchTournament)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, fetchTournaments)
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +109,7 @@ export default function Registration() {
   };
 
   const isFreeTournament = !activeTournament?.entryFee || activeTournament?.entryFee === "0" || activeTournament?.entryFee === 0;
+  const availableTournaments = tournaments.filter(t => t.activeStage === 'registration' && t.id !== activeTournament?.id);
 
   if (!activeTournament) {
     return <div className="min-h-screen flex items-center justify-center bg-background-dark text-white">Loading tournament...</div>;
@@ -272,16 +282,42 @@ export default function Registration() {
             </form>
           </>
         ) : (
-          <div className="py-20 animate-in fade-in zoom-in duration-500">
-            <div className="glass-panel rounded-3xl p-10 flex flex-col items-center gap-6 border border-white/5 bg-white/[0.02]">
-              <div className="w-20 h-20 rounded-full bg-secondary/10 flex items-center justify-center border border-secondary/20">
-                <Info className="text-secondary w-10 h-10" />
+          <div className="py-12 md:py-20 animate-in fade-in zoom-in duration-500 w-full max-w-sm mx-auto">
+            <div className="glass-panel rounded-3xl p-6 md:p-8 flex flex-col items-center gap-6 border border-white/5 bg-white/[0.02]">
+              <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center border border-secondary/20">
+                <Info className="text-secondary w-8 h-8" />
               </div>
               <div className="text-center space-y-2">
-                <h4 className="text-2xl font-black italic uppercase tracking-tighter text-white">Registration Closed</h4>
-                <p className="text-background-light/50 text-sm max-w-xs mx-auto">This tournament is now in the <span className="text-primary font-bold uppercase">{activeTournament.activeStage}</span> phase. Stay tuned for future events!</p>
+                <h4 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-white">
+                  {activeTournament.activeStage === 'finished' ? 'Tournament Concluded' : 'Registration Closed'}
+                </h4>
+                <p className="text-background-light/50 text-xs md:text-sm max-w-xs mx-auto">
+                  {activeTournament.activeStage === 'finished' ? (
+                    <>This tournament has <span className="text-primary font-bold uppercase">concluded</span>.</>
+                  ) : (
+                    <>This tournament is now in the <span className="text-primary font-bold uppercase">{activeTournament.activeStage}</span> phase.</>
+                  )}
+                </p>
               </div>
-              <Link to="/" className="mt-4 px-8 py-4 bg-white/5 text-white font-black uppercase text-xs tracking-widest rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+
+              {availableTournaments.length > 0 ? (
+                <div className="w-full flex flex-col gap-3 mt-2">
+                  <p className="text-[10px] md:text-xs text-background-light/50 font-bold uppercase tracking-widest text-center mb-2">Available Tournaments</p>
+                  {availableTournaments.map((t: any) => (
+                    <Link 
+                      key={t.id} 
+                      to={`/register/${t.id}`}
+                      className="w-full h-12 bg-primary/10 border border-primary/20 hover:bg-primary/20 flex items-center justify-center text-primary font-bold uppercase text-[10px] md:text-xs tracking-widest rounded-xl transition-all"
+                    >
+                      Apply for {t.name}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs md:text-sm text-background-light/40 italic mt-2 text-center">Stay tuned for future events!</p>
+              )}
+
+              <Link to="/" className="mt-2 w-full h-12 flex items-center justify-center bg-white/5 text-white/70 hover:text-white font-black uppercase text-[10px] md:text-xs tracking-widest rounded-xl border border-white/10 hover:bg-white/10 transition-all">
                 Back to Home
               </Link>
             </div>
